@@ -36,15 +36,77 @@ public final class Curl {
         }
     }
 
-    /** {@link #parse} without the safety net that turns unexpected runtime failures into parse exceptions. */
+    /**
+     * {@link #parse} without the safety net that turns unexpected runtime failures into parse exceptions.
+     *
+     * <p>The text is read in the dialect {@link DialectDetector} reports. If that reading fails in the tokenizer or
+     * finds no curl command, the other dialect is tried (the detector cannot tell a bash string that contains
+     * whitespace followed by {@code ^"} from cmd); when it succeeds a note names the dialect used, when it also fails
+     * the error of the detected dialect is reported. Windows cmd is only tried for a POSIX-detected text that
+     * contains a caret: cmd has no quotes the POSIX tokenizer could be missing, so without cmd's escape character a
+     * failure is a real bash syntax error and the cmd reading of it would be nonsense.
+     */
     static ParsedCurlImpl parseUnguarded(String pastedText) throws CurlParseException {
         if (pastedText == null || pastedText.isBlank()) {
             throw new CurlParseException("Nothing to parse: the pasted text is empty");
         }
-        Tokenizer tk = DialectDetector.detect(pastedText) == DialectDetector.Dialect.CMD
-                ? new CmdTokenizer() : new PosixTokenizer();
-        TokenizeResult tr = tk.tokenize(pastedText);
-        List<Warning> warnings = new ArrayList<>(tr.warnings());
+        boolean cmd = DialectDetector.detect(pastedText) == DialectDetector.Dialect.CMD;
+        Attempt first = attempt(pastedText, cmd, null);
+        if (first.result != null) {
+            return first.result;
+        }
+        if (first.retry && (cmd || pastedText.indexOf('^') >= 0)) {
+            Warning note = Warning.note(cmd
+                    ? "The text looked like Windows cmd but could not be read as such; it was read as a POSIX shell "
+                            + "(bash) command"
+                    : "The text could not be read as a POSIX shell command; it was read as a Windows cmd command");
+            Attempt second = attempt(pastedText, !cmd, note);
+            if (second.result != null) {
+                return second.result;
+            }
+        }
+        throw first.failure;
+    }
+
+    /** Outcome of reading the text in one dialect. */
+    private record Attempt(ParsedCurlImpl result, CurlParseException failure, boolean retry) {
+    }
+
+    private static Attempt attempt(String pastedText, boolean cmd, Warning leadingNote) {
+        try {
+            return new Attempt(parseDialect(pastedText, cmd ? new CmdTokenizer() : new PosixTokenizer(), leadingNote),
+                    null, false);
+        } catch (RetryableException e) {
+            return new Attempt(null, e.original, true);
+        } catch (CurlParseException e) {
+            return new Attempt(null, e, false);
+        }
+    }
+
+    /** The tokenizer rejected the text, or it holds no usable curl command: the other dialect may do better. */
+    private static final class RetryableException extends CurlParseException {
+        private static final long serialVersionUID = 1L;
+        final transient CurlParseException original;
+
+        RetryableException(CurlParseException original) {
+            super(original.getMessage(), original.position());
+            this.original = original;
+        }
+    }
+
+    private static ParsedCurlImpl parseDialect(String pastedText, Tokenizer tk, Warning leadingNote)
+            throws CurlParseException {
+        TokenizeResult tr;
+        try {
+            tr = tk.tokenize(pastedText);
+        } catch (CurlParseException e) {
+            throw new RetryableException(e);
+        }
+        List<Warning> warnings = new ArrayList<>();
+        if (leadingNote != null) {
+            warnings.add(leadingNote);
+        }
+        warnings.addAll(tr.warnings());
 
         List<ParsedCurlImpl.Run> runs = new ArrayList<>();
         List<CurlParseException> errors = new ArrayList<>();
@@ -76,8 +138,8 @@ public final class Curl {
             if (!errors.isEmpty()) {
                 throw errors.get(0);
             }
-            throw new CurlParseException("No curl command found. Paste a command such as: "
-                    + "curl -X POST https://example.com/api -d 'a=1'");
+            throw new RetryableException(new CurlParseException("No curl command found. Paste a command such as: "
+                    + "curl -X POST https://example.com/api -d 'a=1'"));
         }
         for (CurlParseException e : errors) {
             warnings.add(e.getMessage().startsWith("No URL")
