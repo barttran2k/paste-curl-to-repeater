@@ -1,0 +1,40 @@
+export function schemeIs(url: Platform.DevToolsPath.UrlString|URL, scheme: string): boolean {
+  try {
+    return (new URL(url)).protocol === scheme;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Schemes safe for unprivileged web contexts (matching ChildProcessSecurityPolicyImpl::RegisterDefaultSchemes).
+ */
+const WEB_SAFE_SCHEMES = new Set([
+  'http:',
+  'https:',
+  'ws:',
+  'wss:',
+  'data:',
+]);
+
+function parseUnwrappedURL(url: Platform.DevToolsPath.UrlString|URL|string): URL|null {
+  try {
+    let parsed = new URL(url);
+    // Iteratively unwrap nested `blob:` and `filesystem:` URLs (e.g. `blob:filesystem:https://...`)
+    // to inspect the underlying origin's protocol.
+    while (parsed.protocol === 'blob:' || parsed.protocol === 'filesystem:') {
+      parsed = new URL(parsed.href.slice(parsed.protocol.length));
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true if the URL uses an unprivileged web-safe scheme (or is a `blob:`/`filesystem:` URL wrapping one).
+ */
+export function hasWebSafeScheme(url: Platform.DevToolsPath.UrlString|URL|string): boolean {
+  const parsed = parseUnwrappedURL(url);
+  return parsed !== null && WEB_SAFE_SCHEMES.has(parsed.protocol);
+}
