@@ -1,24 +1,18 @@
 package burp;
 
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.http.HttpService;
-import burp.api.montoya.http.message.HttpHeader;
-import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 
-import static burp.api.montoya.internal.ObjectFactoryLocator.FACTORY;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.datatransfer.Clipboard;
+import javax.swing.JMenuItem;
+import java.awt.Component;
+import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.awt.event.ActionEvent;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+/** Adds "Paste cURL command" to Burp's context menu and wires the flow to the real Swing/Montoya parts. */
 public class MenuItemsProvider implements ContextMenuItemsProvider {
 
     private MontoyaApi api;
@@ -36,51 +30,39 @@ public class MenuItemsProvider implements ContextMenuItemsProvider {
         List<Component> menuItemList = new ArrayList<>();
 
         JMenuItem pasteItem = new JMenuItem("Paste cURL command");
-        pasteItem.addActionListener((ActionEvent e) -> {
-            //get cURL request from clipboard
-            String curlRequest = getClipboardContent();
-            api.logging().logToOutput("Parsing: " + curlRequest);
-
-            //parse cURL into raw HTTP request
-            HttpRequest rawRequest = parseCurlRequest(curlRequest);
-
-            //open new HTTP request in repeater
-            api.repeater().sendToRepeater(rawRequest);
-        });
+        pasteItem.addActionListener(e -> createAction().run());
 
         menuItemList.add(pasteItem);
         return menuItemList;
     }
 
-    private HttpRequest parseCurlRequest(String curlCommand) {
-        CurlParser.CurlRequest curlRequest = CurlParser.parseCurlCommand(curlCommand, api);
+    private PasteCurlAction createAction() {
+        LocalFiles files = new LocalFiles();
+        return new PasteCurlAction(
+                MenuItemsProvider::clipboardText,
+                new SwingDialogs(() -> api.userInterface().swingUtils().suiteFrame()),
+                new MontoyaRequestSink(api),
+                new PasteCurlAction.Log() {
+                    @Override
+                    public void output(String message) {
+                        api.logging().logToOutput(message);
+                    }
 
-        HttpService service = HttpService.httpService(curlRequest.getBaseUrl());
-
-        HttpRequest output = HttpRequest.httpRequestFromUrl(curlRequest.getBaseUrl())
-                .withMethod(curlRequest.getMethod())
-                .withBody(curlRequest.getBody());
-
-        for (HttpHeader header : curlRequest.getHeaders()) {
-            output = output.withHeader(header.name(), header.value());
-        }
-
-        output = output.withService(service);
-
-        return output;
+                    @Override
+                    public void error(Throwable t) {
+                        api.logging().logToError(t);
+                    }
+                },
+                files,
+                () -> files);
     }
 
-    public String getClipboardContent() {
-        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-        Transferable transferable = clipboard.getContents(null);
+    /** @return the clipboard text, or null when the clipboard holds no text */
+    static String clipboardText() throws Exception {
+        Transferable transferable = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
         if (transferable != null && transferable.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-            try {
-                return (String) transferable.getTransferData(DataFlavor.stringFlavor);
-            } catch (UnsupportedFlavorException | IOException e) {
-                api.logging().logToError(e);
-            }
+            return (String) transferable.getTransferData(DataFlavor.stringFlavor);
         }
-        return "";
+        return null;
     }
-
 }
