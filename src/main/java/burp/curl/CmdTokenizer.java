@@ -12,6 +12,18 @@ import java.util.regex.Pattern;
  * <p>Two layers, like the real thing: (1) the cmd.exe layer removes {@code ^} escapes, joins
  * {@code ^<LF>} continuations, splits on unquoted {@code & && | ||}, drops redirections; (2) the argument
  * layer splits the resulting command line into argv. Nothing is executed and no variable is expanded.
+ *
+ * <p>Backslashes and quotes in the argument layer depend on who wrote the argument, told by how it is opened:
+ * <ul>
+ * <li>An argument that starts with a caret-escaped quote ({@code ^"...^"}) comes from a browser's "Copy as cURL
+ * (cmd)" menu item. The generators double every backslash and write a literal quote as {@code \^"}, so inside the
+ * quotes {@code \\} gives one backslash and {@code \"} gives a quote (the inverse of the generators).</li>
+ * <li>An argument that starts with a bare quote ({@code "..."}) or has no quote is hand-written and follows the exact
+ * rules of the Microsoft C runtime that curl.exe uses to split its command line: 2n backslashes followed by a
+ * quote give n backslashes and the quote toggles quoting; 2n+1 backslashes followed by a quote give n backslashes and
+ * a literal quote; backslashes not followed by a quote are literal (so {@code "C:\\tmp"} keeps both); inside
+ * quotes {@code ""} is one literal quote.</li>
+ * </ul>
  */
 public final class CmdTokenizer implements Tokenizer {
     private static final Pattern PROMPT =
@@ -291,6 +303,8 @@ public final class CmdTokenizer implements Tokenizer {
             boolean quoted = false;
             boolean inQ = false;
             int qOpen = -1;
+            // opened with ^" : a browser generator wrote it (see the class comment)
+            final boolean generated = cells.get(i).esc() && cells.get(i).c() == '"';
             while (i < n) {
                 Cell cell = cells.get(i);
                 char c = cell.c();
@@ -327,6 +341,24 @@ public final class CmdTokenizer implements Tokenizer {
                         sb.append(c);
                         quoted |= cell.esc();
                         i++;
+                    }
+                } else if (!generated && c == '\\') {
+                    int k = 0;
+                    while (i + k < n && cells.get(i + k).c() == '\\') {
+                        k++;
+                    }
+                    if (i + k < n && cells.get(i + k).c() == '"') {
+                        sb.append("\\".repeat(k / 2));
+                        quoted = true;
+                        if (k % 2 == 1) {
+                            sb.append('"');
+                            i += k + 1;
+                        } else {
+                            i += k; // the quote itself is handled next: it closes quoting or is half of ""
+                        }
+                    } else {
+                        sb.append("\\".repeat(k));
+                        i += k;
                     }
                 } else {
                     if (c == '\\' && i + 1 < n && cells.get(i + 1).c() == '\\') {

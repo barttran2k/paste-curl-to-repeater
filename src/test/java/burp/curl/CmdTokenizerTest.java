@@ -153,7 +153,7 @@ class CmdTokenizerTest {
     @Test
     void backslashRulesInsideQuotes() throws Exception {
         assertEquals(List.of("curl", "C:\\Users\\me"), one("curl \"C:\\Users\\me\""));
-        assertEquals(List.of("curl", "a\\b"), one("curl \"a\\\\b\""));      // divergence: CRT would keep both
+        assertEquals(List.of("curl", "a\\\\b"), one("curl \"a\\\\b\""));    // bare quote: the CRT keeps both
         assertEquals(List.of("curl", "a\\"), one("curl \"a\\\\\""));
         assertEquals(List.of("curl", "a\"b"), one("curl \"a\\\"b\""));
         assertEquals(List.of("curl", "a\\\"b"), one("curl \"a\\\\\\\"b\""));
