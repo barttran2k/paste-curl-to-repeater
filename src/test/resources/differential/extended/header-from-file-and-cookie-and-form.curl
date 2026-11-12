@@ -1,0 +1,1 @@
+curl -H @hdr.txt -b 'a=1' -F 'k=v' __BASE__/h

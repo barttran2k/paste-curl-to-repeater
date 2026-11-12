@@ -1,0 +1,1 @@
+curl -H 'Transfer-Encoding: gzip' -d abc __BASE__/h

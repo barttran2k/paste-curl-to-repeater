@@ -1,0 +1,1 @@
+curl --variable v=1 --expand-data '{{v}}' __BASE__/a --next --expand-data '[{{v}}]' __BASE__/b

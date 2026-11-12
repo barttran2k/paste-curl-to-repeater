@@ -1,0 +1,1 @@
+curl --variable v=val --expand-form 'f={{v}}' __BASE__/x

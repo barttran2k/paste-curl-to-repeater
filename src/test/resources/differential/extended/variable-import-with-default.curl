@@ -1,0 +1,1 @@
+curl --variable '%NO_SUCH_ENV_VARIABLE_ZZ=fallback' --expand-data '{{NO_SUCH_ENV_VARIABLE_ZZ}}' __BASE__/x

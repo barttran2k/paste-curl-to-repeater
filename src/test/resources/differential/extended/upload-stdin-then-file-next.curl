@@ -1,0 +1,1 @@
+curl -T - __BASE__/u1 --next -T b.txt __BASE__/u2 <<< 'abc'

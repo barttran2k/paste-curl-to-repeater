@@ -13,7 +13,9 @@ import java.util.List;
  * @param path request path, always starting with "/"
  * @param query query without "?", or null
  * @param typedHeaders the {@code -H} headers exactly as the user typed them, in order (not the ones curl adds)
- * @param body the body bytes, empty when the request has none
+ * @param body the body content as curl was given it: after {@code -d}/{@code -F}/{@code -T} processing but before
+ *             {@code --crlf} conversion and chunk encoding (the raw request carries the bytes as sent), empty when the
+ *             request has no body
  */
 public record RequestDetails(BuiltRequest request, String scheme, String host, int explicitPort, String path,
                              String query, List<String> typedHeaders, byte[] body) {

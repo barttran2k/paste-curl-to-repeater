@@ -1,0 +1,1 @@
+curl -G --url-query 'a=1' --url-query 'b=2' __BASE__/q

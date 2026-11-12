@@ -1,0 +1,1 @@
+curl --variable n=2 --expand-json '{"n":{{n}}}' __BASE__/j
