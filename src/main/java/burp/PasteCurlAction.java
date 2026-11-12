@@ -1,0 +1,247 @@
+package burp;
+
+import burp.curl.BuiltRequest;
+import burp.curl.Curl;
+import burp.curl.CurlParseException;
+import burp.curl.FileAccess;
+import burp.curl.ParsedCurl;
+import burp.curl.Warning;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Supplier;
+
+/**
+ * The whole "Paste cURL command" flow: clipboard, parse, file confirmation, build, send, warnings.
+ *
+ * <p>Depends only on the small interfaces declared here so it can be tested without Burp or Swing.
+ * Call {@link #run()} on the thread that may show dialogs (the EDT). Parsing and building are cheap and run on
+ * the same thread; to move them off the EDT later, split {@link #run()} at the dialog calls.
+ *
+ * <p>Nothing from the pasted command (headers, bodies, URLs) is ever written to the {@link Log}.
+ */
+public final class PasteCurlAction {
+    /** Maximum number of Repeater tabs created by one paste. */
+    public static final int MAX_TABS = 20;
+    /** Maximum number of LOSSY warnings listed in the dialog. */
+    public static final int MAX_LISTED_WARNINGS = 15;
+    /** Characters of pasted text shown on each side of a parse error position. */
+    static final int EXCERPT_RADIUS = 30;
+
+    /** Title used by all dialogs. */
+    public static final String TITLE = "Paste cURL";
+
+    /** Source of the clipboard text. */
+    public interface ClipboardSource {
+        /** @return the clipboard text, or null when the clipboard holds no text */
+        String text() throws Exception;
+    }
+
+    /** User choice in the file confirmation dialog. */
+    public enum FileChoice { READ_FILES, USE_PLACEHOLDERS, CANCEL }
+
+    /**
+     * What is known about a local path named in the command.
+     * @param written the path as written in the command
+     * @param resolved the absolute path it resolves to, or a short reason when it cannot be resolved
+     * @param status "found, N bytes", "not found", "too large (N bytes)", ...
+     */
+    public record FileInfo(String written, String resolved, String status) { }
+
+    /** Inspects paths without reading their content. */
+    public interface FileProbe {
+        /** @param path path as written in the command @return facts about it; must not read the content */
+        FileInfo describe(String path);
+    }
+
+    /** User-facing dialogs. All calls happen on the thread that calls {@link #run()}. */
+    public interface Dialogs {
+        /** @param title dialog title @param message text */
+        void info(String title, String message);
+
+        /** @param title dialog title @param message text */
+        void error(String title, String message);
+
+        /** @param title dialog title @param message text */
+        void warning(String title, String message);
+
+        /** @param files every path the command wants to read @return the user's choice */
+        FileChoice confirmFiles(List<FileInfo> files);
+    }
+
+    /** Receives finished requests. */
+    public interface RequestSink {
+        /** @param request the request @param tabName tab title, or null for the default naming */
+        void send(BuiltRequest request, String tabName);
+    }
+
+    /** Extension log. */
+    public interface Log {
+        /** @param message a line for the extension output */
+        void output(String message);
+
+        /** @param t an unexpected failure */
+        void error(Throwable t);
+    }
+
+    private final ClipboardSource clipboard;
+    private final Dialogs dialogs;
+    private final RequestSink sink;
+    private final Log log;
+    private final FileProbe probe;
+    private final Supplier<FileAccess> realFiles;
+
+    /**
+     * @param clipboard clipboard source
+     * @param dialogs dialogs
+     * @param sink request sink
+     * @param log log
+     * @param probe path inspector for the confirmation dialog
+     * @param realFiles factory of the FileAccess used after the user chose "Read files"
+     */
+    public PasteCurlAction(ClipboardSource clipboard, Dialogs dialogs, RequestSink sink, Log log,
+                           FileProbe probe, Supplier<FileAccess> realFiles) {
+        this.clipboard = clipboard;
+        this.dialogs = dialogs;
+        this.sink = sink;
+        this.log = log;
+        this.probe = probe;
+        this.realFiles = realFiles;
+    }
+
+    /** Runs the flow once. Never throws. */
+    public void run() {
+        try {
+            runUnchecked();
+        } catch (Throwable t) {
+            try {
+                log.error(t);
+            } catch (Throwable ignored) {
+                // nothing left to do
+            }
+            try {
+                dialogs.error(TITLE + " - unexpected error",
+                        "Unexpected error: " + t + "\nNo request was sent. Details are in the extension's Errors tab.");
+            } catch (Throwable ignored) {
+                // nothing left to do
+            }
+        }
+    }
+
+    private void runUnchecked() throws Exception {
+        String text = clipboard.text();
+        if (text == null || text.isBlank()) {
+            dialogs.info(TITLE, "The clipboard does not contain any text. Copy a cURL command first.");
+            return;
+        }
+
+        ParsedCurl parsed;
+        try {
+            parsed = Curl.parse(text);
+        } catch (CurlParseException e) {
+            showParseError(e, text);
+            return;
+        }
+
+        FileAccess files = FileAccess.DENY;
+        List<String> refs = parsed.fileRefs();
+        if (!refs.isEmpty()) {
+            List<FileInfo> infos = new ArrayList<>();
+            for (String ref : refs) {
+                infos.add(probe.describe(ref));
+            }
+            FileChoice choice = dialogs.confirmFiles(infos);
+            if (choice == null || choice == FileChoice.CANCEL) {
+                return;
+            }
+            if (choice == FileChoice.READ_FILES) {
+                files = realFiles.get();
+            }
+        }
+
+        List<BuiltRequest> requests;
+        try {
+            requests = parsed.build(files);
+        } catch (CurlParseException e) {
+            showParseError(e, text);
+            return;
+        }
+        if (requests.isEmpty()) {
+            dialogs.info(TITLE, "The command did not produce any HTTP request.");
+            return;
+        }
+
+        int total = requests.size();
+        int sent = Math.min(total, MAX_TABS);
+        for (int i = 0; i < sent; i++) {
+            sink.send(requests.get(i), total == 1 ? null : "curl " + (i + 1) + "/" + sent);
+        }
+        log.output("Sent " + sent + (sent == 1 ? " request" : " requests") + " to Repeater");
+
+        report(parsed, requests.subList(0, sent), total, sent);
+    }
+
+    private void report(ParsedCurl parsed, List<BuiltRequest> sentRequests, int total, int sent) {
+        Set<Warning> all = new LinkedHashSet<>(parsed.warnings());
+        for (BuiltRequest r : sentRequests) {
+            all.addAll(r.warnings());
+        }
+        List<String> lossy = new ArrayList<>();
+        for (Warning w : all) {
+            if (w.severity() == Warning.Severity.LOSSY) {
+                lossy.add(w.message());
+                log.output("LOSSY: " + w.message());
+            } else {
+                log.output("NOTE: " + w.message());
+            }
+        }
+        String capNote = total > sent
+                ? "The command produced " + total + " requests; only the first " + sent + " were sent to Repeater."
+                : null;
+        if (capNote != null) {
+            log.output(capNote);
+        }
+
+        if (!lossy.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("The request in Repeater may differ from what curl would send:\n");
+            int shown = Math.min(lossy.size(), MAX_LISTED_WARNINGS);
+            for (int i = 0; i < shown; i++) {
+                sb.append("\n- ").append(lossy.get(i));
+            }
+            if (lossy.size() > shown) {
+                sb.append("\n- ... and ").append(lossy.size() - shown).append(" more (see the extension output)");
+            }
+            if (capNote != null) {
+                sb.append("\n\n").append(capNote);
+            }
+            dialogs.warning(TITLE + " - request may differ from curl", sb.toString());
+        } else if (capNote != null) {
+            dialogs.info(TITLE, capNote);
+        }
+    }
+
+    private void showParseError(CurlParseException e, String text) {
+        StringBuilder sb = new StringBuilder("Could not parse the cURL command:\n").append(e.getMessage());
+        if (e.position() >= 0) {
+            sb.append("\n\nNear character ").append(e.position()).append(":\n").append(excerpt(text, e.position()));
+        }
+        dialogs.error(TITLE + " - cannot parse", sb.toString());
+    }
+
+    /**
+     * @param text pasted text
+     * @param position error offset
+     * @return a one-line excerpt around the position with a visible marker
+     */
+    static String excerpt(String text, int position) {
+        int pos = Math.max(0, Math.min(position, text.length()));
+        int from = Math.max(0, pos - EXCERPT_RADIUS);
+        int to = Math.min(text.length(), pos + EXCERPT_RADIUS);
+        String before = text.substring(from, pos).replaceAll("\\s", " ");
+        String after = text.substring(pos, to).replaceAll("\\s", " ");
+        return (from > 0 ? "..." : "") + before + " >>HERE<< " + after + (to < text.length() ? "..." : "");
+    }
+}
