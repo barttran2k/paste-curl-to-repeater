@@ -225,13 +225,54 @@ public final class CurlCommandParser {
                 addData(Operation.DataPiece.Kind.JSON, arg);
             }
             default -> {
+                if (PROXY_OPTIONS.contains(spec.longName())) {
+                    // the proxy family is group C in the table (no effect on the bytes) but worth a hint
+                    out.warnings.add(Warning.lossy(optionWarning(spec.longName(), opt, null)));
+                    return;
+                }
                 switch (spec.handling()) {
                     case A -> unsupported(opt);
-                    case B -> out.warnings.add(Warning.lossy(opt
-                            + " changes how curl sends the request and is not reproduced; the request may differ"));
+                    case B -> out.warnings.add(Warning.lossy(optionWarning(spec.longName(), opt,
+                            arg == null ? null : ByteText.display(wire(arg)))));
                     default -> { }
                 }
             }
+        }
+    }
+
+    /** Options that select a proxy for the transfer. */
+    private static final java.util.Set<String> PROXY_OPTIONS = java.util.Set.of("proxy", "preproxy", "socks4",
+            "socks4a", "socks5", "socks5-hostname");
+
+    /**
+     * The one-sentence warning of an option that changes how curl sends the request without changing its bytes.
+     * Credentials never appear in it; only {@code --resolve} and {@code --connect-to} echo their argument.
+     */
+    private static String optionWarning(String name, String opt, String arg) {
+        switch (name) {
+            case "proxy", "preproxy", "socks4", "socks4a", "socks5", "socks5-hostname":
+                return opt + ": the request content is unchanged, but curl would send it through that proxy; "
+                        + "configure an upstream proxy in Burp if needed.";
+            case "resolve", "connect-to":
+                return opt + " " + arg + ": curl would connect to a different address than the URL's host; add a "
+                        + "hostname resolution override in Burp (Settings \u2192 Network \u2192 Connections) to "
+                        + "reproduce it.";
+            case "unix-socket", "abstract-unix-socket":
+                return opt + ": Burp cannot connect to a Unix socket, so the request is not sent over it.";
+            case "cert", "key":
+                return opt + ": curl would present a client TLS certificate; add it in Burp (Settings \u2192 Network "
+                        + "\u2192 TLS \u2192 Client TLS certificates).";
+            case "digest", "ntlm", "ntlm-wb", "negotiate", "anyauth":
+                return opt + ": the authentication handshake is not precomputed and no Authorization header is "
+                        + "added; configure platform authentication in Burp or add the header yourself.";
+            case "aws-sigv4":
+                return opt + ": the AWS signature headers are not computed.";
+            case "config":
+                return opt + ": the config file is not read, so the options inside it are missing.";
+            case "netrc", "netrc-file", "netrc-optional":
+                return opt + ": credentials from .netrc are not read.";
+            default:
+                return opt + " changes how curl sends the request and is not reproduced; the request may differ";
         }
     }
 
