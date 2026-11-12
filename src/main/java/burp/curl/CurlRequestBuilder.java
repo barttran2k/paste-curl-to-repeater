@@ -136,7 +136,7 @@ final class CurlRequestBuilder {
                 body.knownSize = r[0].length;
                 method = "PUT";
                 if (!path.equals("-")) {
-                    url = url.withPathSuffix(baseName(path));
+                    url = url.withPathSuffix(PathNames.uploadName(path));
                 }
             } else if (hasForm) {
                 if (formBody == null) {
@@ -276,11 +276,6 @@ final class CurlRequestBuilder {
             }
         }
         return false;
-    }
-
-    private static String baseName(String path) {
-        int cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        return path.substring(cut + 1);
     }
 
     // ---- header files, cookies, query ----
@@ -432,11 +427,7 @@ final class CurlRequestBuilder {
         try {
             List<FormField> parts = f.kind() == FormField.Kind.FILE_LIST ? f.files() : List.of(f);
             for (FormField p : parts) {
-                for (String h : p.headers()) {
-                    if (FormField.isHeaderFile(h)) {
-                        out.add(h.substring(1));
-                    }
-                }
+                out.addAll(p.headerFilePaths());
             }
         } catch (CurlParseException e) {
             // not reachable for fields from FormField.parse

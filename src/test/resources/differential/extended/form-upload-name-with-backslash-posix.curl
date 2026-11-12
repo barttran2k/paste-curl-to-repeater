@@ -1,0 +1,1 @@
+curl -F 'f=@win\name.png' __BASE__/f

@@ -204,8 +204,7 @@ public final class Curl {
             "(");
 
     private static String baseName(String w) {
-        int cut = Math.max(w.lastIndexOf('/'), w.lastIndexOf('\\'));
-        return w.substring(cut + 1).toLowerCase(Locale.ROOT);
+        return PathNames.baseName(w, true).toLowerCase(Locale.ROOT);
     }
 
     /**
