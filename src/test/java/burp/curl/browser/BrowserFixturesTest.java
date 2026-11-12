@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -31,14 +30,6 @@ class BrowserFixturesTest {
 
     private static Path root() throws Exception {
         return Path.of(BrowserFixturesTest.class.getResource("/browser/fixtures").toURI());
-    }
-
-    /** Writes the fixtures into the source tree when asked: -Dbrowser.fixtures.regenerate=true. */
-    @Test
-    void regenerateWhenAsked() throws Exception {
-        Assumptions.assumeTrue(Boolean.getBoolean("browser.fixtures.regenerate"), "regeneration not requested");
-        Assumptions.assumeTrue(RealCurlBatch.available(), "needs the real curl");
-        FixtureGenerator.generate(Paths.get("src/test/resources/browser/fixtures"));
     }
 
     @TestFactory

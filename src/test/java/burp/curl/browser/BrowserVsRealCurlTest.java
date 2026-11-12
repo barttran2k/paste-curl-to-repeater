@@ -78,28 +78,6 @@ class BrowserVsRealCurlTest {
         return out;
     }
 
-    /** True when the bash and the cmd text of the browser mean the same bytes for every intended argument. */
-    static boolean sameMeaning(Flavor bash, Flavor cmd, Gen bashGen, Gen cmdGen) {
-        if (!bashGen.argv().equals(cmdGen.argv())) {
-            return false;
-        }
-        for (String a : bashGen.argv()) {
-            if (!java.util.Arrays.equals(Expectation.loss(bash, a), Expectation.loss(cmd, a))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /** Bash text of exactly what the cmd flavour means: intended arguments through the cmd loss, UTF-8 quoting. */
-    static String bashOfCmdMeaning(Flavor cmd, Gen cmdGen) {
-        StringBuilder b = new StringBuilder("curl");
-        for (String a : cmdGen.argv()) {
-            b.append(' ').append(BrowserGenerators.chromePosix(new String(Expectation.loss(cmd, a), java.nio.charset.StandardCharsets.UTF_8)));
-        }
-        return b.toString();
-    }
-
     private static byte[] ours(String text) throws Exception {
         List<BuiltRequest> b = Curl.parse(text).build(FileAccess.DENY);
         assertEquals(1, b.size(), "requests built for:\n" + text);
@@ -127,11 +105,11 @@ class BrowserVsRealCurlTest {
                     cmds.add(bash.gen(r).text());
                     if (cmdOrNull == null) {
                         cmdIdx[i] = -1;
-                    } else if (sameMeaning(bash, cmdOrNull, bash.gen(r), cmdOrNull.gen(r))) {
+                    } else if (Expectation.sameMeaning(bash, cmdOrNull, bash.gen(r), cmdOrNull.gen(r))) {
                         cmdIdx[i] = bashIdx[i];
                     } else {
                         cmdIdx[i] = cmds.size();
-                        cmds.add(bashOfCmdMeaning(cmdOrNull, cmdOrNull.gen(r)));
+                        cmds.add(Expectation.bashOfCmdMeaning(cmdOrNull, cmdOrNull.gen(r)));
                     }
                 }
                 return cmds;

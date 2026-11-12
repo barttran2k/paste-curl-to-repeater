@@ -48,6 +48,8 @@ class PosixTokenizerGroupingTest {
         assertEquals(List.of(List.of("curl", "http://h/x"), List.of("curl", "http://h/y")),
                 cmds("(curl http://h/x); (curl http://h/y)"));
         assertEquals(List.of(List.of("curl", "http://h/a)b")), cmds("curl http://h/a)b"));
+        // lenient on purpose (bash: syntax error): an unmatched ")" outside any group stays an ordinary word
+        assertEquals(List.of(List.of("curl", "http://h/", ")")), cmds("curl http://h/ )"));
     }
 
     @Test

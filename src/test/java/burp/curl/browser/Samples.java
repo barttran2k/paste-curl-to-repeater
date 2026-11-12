@@ -351,6 +351,9 @@ final class Samples {
         return null;
     }
 
+    /** Number of requests whose headers {@link #avoidCoreBug} changed (so tests can report how far it narrows the domain). */
+    static final java.util.concurrent.atomic.AtomicInteger REWRITTEN = new java.util.concurrent.atomic.AtomicInteger();
+
     /**
      * Works around a bug found in the core (W3a's code), which CoreBugsTest keeps failing: header and cookie
      * arguments are decoded as UTF-8 text, so bytes that are not UTF-8 (the Latin-1 bytes bash makes of Firefox's and
@@ -360,6 +363,7 @@ final class Samples {
      */
     static Req avoidCoreBug(Flavor f, Req r) {
         List<Hdr> hs = new ArrayList<>();
+        boolean changed = false;
         boolean latin1Bug = f == Flavor.FIREFOX_BASH || f == Flavor.SAFARI_BASH;
         for (Hdr h : r.headers()) {
             String name = h.name();
@@ -367,7 +371,12 @@ final class Samples {
                 // second core bug: real curl drops a -H argument whose name is empty (":authority: x"), we send it
                 name = "X" + name.substring(1);
             }
-            hs.add(latin1Bug ? new Hdr(xify(name), xify(h.value())) : new Hdr(name, h.value()));
+            Hdr n = latin1Bug ? new Hdr(xify(name), xify(h.value())) : new Hdr(name, h.value());
+            changed |= !n.equals(h);
+            hs.add(n);
+        }
+        if (changed) {
+            REWRITTEN.incrementAndGet();
         }
         return r.withHeaders(hs);
     }

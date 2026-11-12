@@ -15,4 +15,4 @@ the text and the expected bytes; `BrowserFixturesTest` substitutes an arbitrary 
 the version of the default `User-Agent: curl/x.y.z` are normalised when comparing (as in the differential harness).
 
 Regenerate (needs curl, bash >= 4.2, a UTF-8 locale):
-`mvn -q test -Dtest=BrowserFixturesTest#regenerateWhenAsked -Dbrowser.fixtures.regenerate=true`
+`mvn -q test-compile && java -cp target/classes:target/test-classes burp.curl.browser.FixtureGenerator src/test/resources/browser/fixtures`

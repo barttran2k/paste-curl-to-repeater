@@ -15,11 +15,22 @@ import java.util.Map;
  * node-validated generator ports, the .expected.http files from the real bash + curl against a loopback capture
  * server (the cmd flavours reuse the bash flavour's bytes after proving the two mean the same thing).
  *
- * <p>Run: {@code mvn -q test-compile exec:java} is not configured; use
- * {@code mvn -q test -Dtest=BrowserFixturesTest -Dbrowser.fixtures.regenerate=true}.
+ * <p>Run after {@code mvn -q test-compile}:
+ * {@code java -cp target/classes:target/test-classes burp.curl.browser.FixtureGenerator src/test/resources/browser/fixtures}
  */
 final class FixtureGenerator {
     private FixtureGenerator() {
+    }
+
+    /**
+     * @param args the fixtures directory
+     * @throws Exception on failure
+     */
+    public static void main(String[] args) throws Exception {
+        if (!RealCurlBatch.available()) {
+            throw new IllegalStateException("needs curl, bash >= 4.2 and a UTF-8 locale");
+        }
+        generate(Path.of(args[0]));
     }
 
     static String ext(Flavor f) {
@@ -57,13 +68,13 @@ final class FixtureGenerator {
                 // bodies lose their CR) it runs the bash text of exactly what the cmd text means
                 List<Boolean> same = new ArrayList<>();
                 for (FixtureRequests.Fx fx : reqs) {
-                    same.add(!f.cmd() || BrowserVsRealCurlTest.sameMeaning(bash, f, bash.gen(fx.req()), f.gen(fx.req())));
+                    same.add(!f.cmd() || Expectation.sameMeaning(bash, f, bash.gen(fx.req()), f.gen(fx.req())));
                 }
                 RealCurlBatch.Outcome o = RealCurlBatch.run(port -> {
                     List<String> cmds = new ArrayList<>();
                     for (int i = 0; i < reqs.size(); i++) {
                         Req r = reqs.get(i).req();
-                        String text = same.get(i) ? bash.gen(r).text() : BrowserVsRealCurlTest.bashOfCmdMeaning(f, f.gen(r));
+                        String text = same.get(i) ? bash.gen(r).text() : Expectation.bashOfCmdMeaning(f, f.gen(r));
                         cmds.add(text.replace(FixtureRequests.HP, "127.0.0.1:" + port));
                     }
                     return cmds;
