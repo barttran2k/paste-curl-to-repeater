@@ -2,6 +2,8 @@ package burp.curl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * One {@code -F}/{@code --form}/{@code --form-string} argument, parsed the way curl's {@code tool_formparse.c} does.
@@ -30,7 +32,8 @@ import java.util.List;
  * unknown parameters without a preceding {@code type=} are skipped silently. {@code type=} needs a {@code /} with text on
  * both sides. {@code encoder=} is rejected (not implemented). A missing {@code =} is an error, as in curl.
  */
-public record FormField(String name, Kind kind, String value, String type, String filename, List<String> headers) {
+public record FormField(String name, Kind kind, String value, String type, String filename, List<String> headers,
+                        Set<Integer> literalHeaders) {
 
     /** What the content of the field is. */
     public enum Kind {
@@ -44,9 +47,25 @@ public record FormField(String name, Kind kind, String value, String type, Strin
         FILE_LIST
     }
 
-    /** Normalises a null header list. */
+    /** Normalises null lists. */
     public FormField {
         headers = headers == null ? List.of() : List.copyOf(headers);
+        literalHeaders = literalHeaders == null ? Set.of() : Set.copyOf(literalHeaders);
+    }
+
+    /** A field whose headers are all either files (leading {@code @}/{@code <}) or plain text without that marker. */
+    public FormField(String name, Kind kind, String value, String type, String filename, List<String> headers) {
+        this(name, kind, value, type, filename, headers, Set.of());
+    }
+
+    /**
+     * @param i index into {@link #headers()}
+     * @return true when that header names a file of header lines: {@code headers=@file} or {@code headers=<file}
+     *         with the marker unquoted. A quoted value such as {@code headers="@x: y"} is a literal header even
+     *         though it starts with {@code @} (measured with curl 8.7.1).
+     */
+    public boolean isHeaderFile(int i) {
+        return !literalHeaders.contains(i) && isHeaderFile(headers.get(i));
     }
 
     /**
@@ -59,7 +78,7 @@ public record FormField(String name, Kind kind, String value, String type, Strin
     public static FormField parse(String arg) throws CurlParseException {
         int eq = arg.indexOf('=');
         if (eq < 0) {
-            throw new CurlParseException("-F: expected name=content, got '" + arg + "'");
+            throw new CurlParseException("-F: expected name=content");
         }
         String name = arg.substring(0, eq);
         String content = arg.substring(eq + 1);
@@ -68,14 +87,14 @@ public record FormField(String name, Kind kind, String value, String type, Strin
             if (files.size() == 1) {
                 return files.get(0);
             }
-            return new FormField(name, Kind.FILE_LIST, content.substring(1), null, null, List.of());
+            return new FormField(name, Kind.FILE_LIST, content.substring(1), null, null, List.of(), Set.of());
         }
         if (!content.isEmpty() && content.charAt(0) == '<') {
             Part p = parsePart(content, 1, (char) 0);
-            return new FormField(name, Kind.FILE_CONTENT, p.word, p.type, p.filename, p.headers);
+            return new FormField(name, Kind.FILE_CONTENT, p.word, p.type, p.filename, p.headers, p.literalHeaders);
         }
         Part p = parsePart(content, 0, (char) 0);
-        return new FormField(name, Kind.LITERAL, p.word, p.type, p.filename, p.headers);
+        return new FormField(name, Kind.LITERAL, p.word, p.type, p.filename, p.headers, p.literalHeaders);
     }
 
     /**
@@ -88,7 +107,7 @@ public record FormField(String name, Kind kind, String value, String type, Strin
     public static FormField parseString(String arg) throws CurlParseException {
         int eq = arg.indexOf('=');
         if (eq < 0) {
-            throw new CurlParseException("--form-string: expected name=content, got '" + arg + "'");
+            throw new CurlParseException("--form-string: expected name=content");
         }
         return new FormField(arg.substring(0, eq), Kind.LITERAL, arg.substring(eq + 1), null, null, List.of());
     }
@@ -127,9 +146,16 @@ public record FormField(String name, Kind kind, String value, String type, Strin
         if (kind == Kind.FILE_UPLOAD || kind == Kind.FILE_CONTENT) {
             out.add(value);
         }
-        for (String h : headers) {
-            if (isHeaderFile(h)) {
-                out.add(h.substring(1));
+        out.addAll(headerFilePaths());
+        return out;
+    }
+
+    /** @return the paths of this field's own {@code headers=@file} / {@code headers=<file} entries */
+    public List<String> headerFilePaths() {
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < headers.size(); i++) {
+            if (isHeaderFile(i)) {
+                out.add(headers.get(i).substring(1));
             }
         }
         return out;
@@ -146,6 +172,8 @@ public record FormField(String name, Kind kind, String value, String type, Strin
         String type;
         String filename;
         final List<String> headers = new ArrayList<>();
+        /** indexes of {@link #headers} that are literal text although they start with {@code @} or {@code <} */
+        final Set<Integer> literalHeaders = new TreeSet<>();
         int end;
     }
 
@@ -154,7 +182,8 @@ public record FormField(String name, Kind kind, String value, String type, Strin
         int p = 0;
         while (true) {
             Part part = parsePart(spec, p, ',');
-            out.add(new FormField(name, Kind.FILE_UPLOAD, part.word, part.type, part.filename, part.headers));
+            out.add(new FormField(name, Kind.FILE_UPLOAD, part.word, part.type, part.filename, part.headers,
+                    part.literalHeaders));
             p = part.end;
             while (p < spec.length() && spec.charAt(p) != ',') {
                 p = scanSegmentEnd(spec, p, ',');
@@ -291,7 +320,7 @@ public record FormField(String name, Kind kind, String value, String type, Strin
                     ok = m > m0;
                 }
                 if (!ok) {
-                    throw new CurlParseException("illegally formatted content-type field in '" + s + "'");
+                    throw new CurlParseException("illegally formatted content-type field");
                 }
                 int end = scanSegmentEnd(s, t, endchar);
                 r.type = trimEnd(s.substring(t, end));
@@ -316,6 +345,10 @@ public record FormField(String name, Kind kind, String value, String type, Strin
                 String h = getWord(s, p, endchar, e);
                 p = e[0];
                 if (!h.isEmpty()) {
+                    if (marker.isEmpty() && isHeaderFile(h)) {
+                        // a quoted value: the marker is only one when it is the very first character, unquoted
+                        r.literalHeaders.add(r.headers.size());
+                    }
                     r.headers.add(marker + h);
                 }
             } else if (prefix(s, p, "encoder=")) {

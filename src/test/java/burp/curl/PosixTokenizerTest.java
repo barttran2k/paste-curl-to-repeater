@@ -96,7 +96,7 @@ class PosixTokenizerTest {
         TokenizeResult r = tok("curl $TOKEN ${A:-b c} $(echo \"x y\") \"$(cat a b)\" `date +%s` $((1+2)) \"pre-$X-post\"");
         assertEquals(List.of("curl", "$TOKEN", "${A:-b c}", "$(echo \"x y\")", "$(cat a b)", "`date +%s`",
                 "$((1+2))", "pre-$X-post"), argv(r.commands().get(0)));
-        assertEquals(7, lossy(r));
+        assertEquals(5, lossy(r)); // the three command substitutions are one message now
         assertTrue(r.warnings().get(0).message().contains("$TOKEN"));
     }
 

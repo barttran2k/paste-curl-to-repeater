@@ -17,4 +17,12 @@ class SwingDialogsTextTest {
         assertTrue(t.contains("home directory (/home/u)"));
         assertTrue(t.contains("working directory"));
     }
+
+    @Test
+    void withoutAHomeDirectoryNoDirectoryIsNamed() {
+        String t = SwingDialogs.fileConfirmationText(
+                List.of(new PasteCurlAction.FileInfo("a.json", "-", "cannot be read")), null);
+        assertTrue(!t.contains("home directory"));
+        assertTrue(t.contains("As written: a.json"));
+    }
 }

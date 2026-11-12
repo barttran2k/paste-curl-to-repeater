@@ -63,6 +63,54 @@ public final class Corpus {
         }
     }
 
+    /** A fixture whose name cannot be tracked in git (Windows-illegal characters): created at test time. */
+    public record SpecialFile(String name, byte[] content) { }
+
+    private static String unescape(String s) {
+        java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+        byte[] b = s.getBytes(StandardCharsets.UTF_8);
+        for (int i = 0; i < b.length; i++) {
+            if (b[i] == '%' && i + 2 < b.length) {
+                o.write(Integer.parseInt(new String(b, i + 1, 2, StandardCharsets.US_ASCII), 16));
+                i += 2;
+            } else {
+                o.write(b[i]);
+            }
+        }
+        return o.toString(StandardCharsets.UTF_8);
+    }
+
+    /** @return the fixtures listed in {@code special-files.tsv} (see the README for the escaping) */
+    public static List<SpecialFile> specialFiles() throws IOException {
+        List<SpecialFile> out = new ArrayList<>();
+        for (String line : Files.readAllLines(root().resolve("special-files.tsv"), StandardCharsets.UTF_8)) {
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            int tab = line.indexOf('\t');
+            out.add(new SpecialFile(unescape(line.substring(0, tab)),
+                    unescape(line.substring(tab + 1)).getBytes(StandardCharsets.UTF_8)));
+        }
+        return out;
+    }
+
+    /** Writes the special fixtures into {@code dir}; returns null on success or the reason the file system refuses. */
+    public static String materialiseSpecialFiles(Path dir) throws IOException {
+        for (SpecialFile f : specialFiles()) {
+            try {
+                Path p = dir.resolve(f.name());
+                if (p.getParent() != null) {
+                    Files.createDirectories(p.getParent());
+                }
+                Files.write(p, f.content());
+            } catch (java.nio.file.InvalidPathException | IOException e) {
+                return "this file system cannot create the fixture name '" + f.name() + "' (" + e.getClass()
+                        .getSimpleName() + ")";
+            }
+        }
+        return null;
+    }
+
     /** @return the fixture directory copied into each case's working directory */
     public static Path filesDir() {
         return root().resolve("files");

@@ -27,24 +27,14 @@ final class CurlRequestBuilder {
 
     private final FileAccess files;
     private final Map<Operation.StdinSource, Boolean> stdinRead = new IdentityHashMap<>();
+    /** why each request that could not be built was skipped (a bad URL), in order */
+    final List<String> skippedReasons = new ArrayList<>();
+    private int requestNumber;
+    /** the lossy warning for each skipped request; the caller attaches them to the requests that were built */
+    final List<Warning> skippedWarnings = new ArrayList<>();
 
     CurlRequestBuilder(FileAccess files) {
         this.files = files;
-    }
-
-    /**
-     * @param operations the operations in order
-     * @param files file access for {@code @file} data
-     * @return one entry per URL per operation, in order
-     * @throws CurlParseException when a URL is invalid or unsupported
-     */
-    static List<RequestDetails> build(List<Operation> operations, FileAccess files) throws CurlParseException {
-        CurlRequestBuilder b = new CurlRequestBuilder(files);
-        List<RequestDetails> result = new ArrayList<>();
-        for (Operation op : operations) {
-            b.buildOperation(op, result);
-        }
-        return result;
     }
 
     /** What a request carries as its body, before the headers are written. */
@@ -119,7 +109,17 @@ final class CurlRequestBuilder {
         int index = 0;
         for (String rawUrl : op.urls) {
             List<Warning> w = new ArrayList<>(warnings);
-            CurlUrl url = CurlUrl.parse(prepareUrl(rawUrl, op.globoff, w), op.protoDefault, op.pathAsIs);
+            requestNumber++;
+            CurlUrl url;
+            try {
+                url = CurlUrl.parse(prepareUrl(rawUrl, op.globoff, w), op.protoDefault, op.pathAsIs);
+            } catch (CurlParseException e) {
+                // curl reports the failing URL and goes on with the next one; so do we, without echoing the URL
+                skippedReasons.add(e.getMessage());
+                skippedWarnings.add(Warning.lossy("Request " + requestNumber + " was skipped: " + e.getMessage()));
+                index++;
+                continue;
+            }
             if (op.disallowUsernameInUrl && (url.user() != null)) {
                 w.add(Warning.lossy("curl refuses a URL with a user name when --disallow-username-in-url is "
                         + "given; the request is built anyway"));
@@ -136,7 +136,7 @@ final class CurlRequestBuilder {
                 body.knownSize = r[0].length;
                 method = "PUT";
                 if (!path.equals("-")) {
-                    url = url.withPathSuffix(baseName(path));
+                    url = url.withPathSuffix(PathNames.uploadName(path));
                 }
             } else if (hasForm) {
                 if (formBody == null) {
@@ -278,11 +278,6 @@ final class CurlRequestBuilder {
         return false;
     }
 
-    private static String baseName(String path) {
-        int cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        return path.substring(cut + 1);
-    }
-
     // ---- header files, cookies, query ----
 
     /** The {@code -H} lines with every {@code -H @file} replaced by the lines of the file. */
@@ -371,7 +366,7 @@ final class CurlRequestBuilder {
                 if (sb == null) {
                     sb = new StringBuilder(piece.length() + 8).append(piece, 0, i);
                 }
-                sb.append('%').append(HEX_UPPER[c >> 4]).append(HEX_UPPER[c & 15]);
+                PercentEncoding.append(sb, c, true);
             } else if (sb != null) {
                 sb.append(c);
             }
@@ -416,7 +411,8 @@ final class CurlRequestBuilder {
             try {
                 mb.add(f, access);
             } catch (IOException | RuntimeException e) {
-                w.add(Warning.lossy("The form field '" + ByteText.display(f.name()) + "' could not be built (" + e.getMessage()
+                w.add(Warning.lossy("A form field could not be built ("
+                        + (e instanceof IOException ? e.getMessage() : e.getClass().getSimpleName())
                         + "); it was skipped"));
             }
         }
@@ -432,11 +428,7 @@ final class CurlRequestBuilder {
         try {
             List<FormField> parts = f.kind() == FormField.Kind.FILE_LIST ? f.files() : List.of(f);
             for (FormField p : parts) {
-                for (String h : p.headers()) {
-                    if (FormField.isHeaderFile(h)) {
-                        out.add(h.substring(1));
-                    }
-                }
+                out.addAll(p.headerFilePaths());
             }
         } catch (CurlParseException e) {
             // not reachable for fields from FormField.parse
@@ -660,9 +652,9 @@ final class CurlRequestBuilder {
         }
         Long t = CurlDate.parse(arg);
         if (t == null) {
-            w.add(Warning.lossy("-z '" + op.timeCond + "' is not a date curl understands; curl then treats it as "
-                    + "the name of a file whose modification time is used, or sends no time condition. No "
-                    + "time condition header was added."));
+            w.add(Warning.lossy("The -z argument is not a date curl understands; curl then treats it as the name "
+                    + "of a file whose modification time is used, or sends no time condition. No time condition "
+                    + "header was added."));
             return;
         }
         if (!hasCustom(custom, header)) {
@@ -697,8 +689,7 @@ final class CurlRequestBuilder {
             if (c < 0) {
                 user = op.user;
                 pass = "";
-                w.add(Warning.lossy("-u " + ByteText.display(user) + " has no password; curl would prompt for one, "
-                        + "an empty password is used"));
+                w.add(Warning.lossy("-u has no password; curl would prompt for one, an empty password is used"));
             } else {
                 user = op.user.substring(0, c);
                 pass = op.user.substring(c + 1);
@@ -763,32 +754,16 @@ final class CurlRequestBuilder {
 
     /** @return {bytes, non-null marker when really read}; on failure the placeholder and a warning */
     private byte[][] readData(Operation op, String path, List<Warning> w) {
+        FileReads.Result r;
         if (path.equals("-")) {
-            Operation.StdinSource s = op.stdin;
-            if (s != null && s.bytes != null) {
-                return new byte[][] {stdinOnce(s, s.bytes), new byte[0]};
+            r = FileReads.readStdin(op.stdin, files, w);
+            if (r.ok()) {
+                r = new FileReads.Result(stdinOnce(op.stdin, r.bytes()), true);
             }
-            if (s != null && s.file != null) {
-                byte[][] r = readData(op, s.file, w);
-                if (r[1] != null) {
-                    r[0] = stdinOnce(s, r[0]);
-                }
-                return r;
-            }
-            w.add(Warning.lossy("The command reads its data from stdin (@-) but no stdin content was pasted"));
-            return new byte[][] {"<<STDIN>>".getBytes(StandardCharsets.UTF_8), null};
+        } else {
+            r = FileReads.read(files, path, w);
         }
-        try {
-            byte[] b = files.read(path);
-            if (b != null) {
-                return new byte[][] {b, new byte[0]};
-            }
-        } catch (IOException | RuntimeException e) {
-            w.add(Warning.lossy("Could not read " + path + " (" + e.getMessage() + "); a placeholder was used"));
-            return new byte[][] {placeholder(path), null};
-        }
-        w.add(Warning.lossy("Could not read " + path + "; a placeholder was used"));
-        return new byte[][] {placeholder(path), null};
+        return new byte[][] {r.bytes(), r.ok() ? new byte[0] : null};
     }
 
     /** curl reads stdin once: a second {@code @-} sees nothing. */
@@ -797,10 +772,6 @@ final class CurlRequestBuilder {
             return new byte[0];
         }
         return data;
-    }
-
-    private static byte[] placeholder(String path) {
-        return ("<<FILE: " + path + ">>").getBytes(StandardCharsets.UTF_8);
     }
 
     private static byte[] stripNewlines(byte[] in) {
@@ -815,40 +786,11 @@ final class CurlRequestBuilder {
 
     /** curl's {@code url} variable function: everything except {@code A-Za-z0-9-._~} becomes %XX (upper case). */
     static byte[] urlEncodeAll(byte[] in) {
-        ByteArrayOutputStream o = new ByteArrayOutputStream(in.length * 3);
-        for (byte x : in) {
-            int c = x & 0xff;
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.'
-                    || c == '_' || c == '~') {
-                o.write(c);
-            } else {
-                o.write('%');
-                o.write(HEX_UPPER[c >> 4]);
-                o.write(HEX_UPPER[c & 15]);
-            }
-        }
-        return o.toByteArray();
+        return PercentEncoding.encode(in, false);
     }
-
-    private static final char[] HEX_UPPER = "0123456789ABCDEF".toCharArray();
 
     /** curl's {@code --data-urlencode} content: unreserved kept, space becomes '+', the rest %XX (upper case). */
     static byte[] urlencode(byte[] in) {
-        ByteArrayOutputStream o = new ByteArrayOutputStream(in.length * 3);
-        for (byte x : in) {
-            int c = x & 0xff;
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.'
-                    || c == '_' || c == '~') {
-                o.write(c);
-            } else if (c == ' ') {
-                o.write('+');
-            } else {
-                o.write('%');
-                o.write(HEX_UPPER[c >> 4]);
-                o.write(HEX_UPPER[c & 15]);
-            }
-        }
-        return o.toByteArray();
+        return PercentEncoding.encode(in, true);
     }
-
 }

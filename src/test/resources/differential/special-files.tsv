@@ -1,0 +1,5 @@
+# name<TAB>content; both fields use %XX escapes (%25 %, %5C backslash, %3A colon, %09 tab, %0A newline)
+win%5Cname.png	backslash name%0A
+up%5Cload.txt	upload body%0A
+bs%5Cdir/x.txt	nested%0A
+lit%3A x	X-From-File: 1%0A

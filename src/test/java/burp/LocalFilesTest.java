@@ -82,4 +82,11 @@ class LocalFilesTest {
         Files.createDirectories(home.resolve("d"));
         assertEquals("is a directory", lf.describe("d").status());
     }
+
+    @Test
+    void homeDirectoryIsTheOneUsedToResolve() throws Exception {
+        LocalFiles f = new LocalFiles(java.nio.file.Paths.get("/some/home"));
+        assertEquals(f.home().toString(), f.homeDirectory());
+        assertEquals(f.home().resolve("a.txt"), f.resolve("a.txt"));
+    }
 }

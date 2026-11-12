@@ -120,20 +120,20 @@ public final class MultipartBuilder {
             case LITERAL: {
                 String fn = field.filename();
                 String guess = fn == null ? null : knownType(fn);
-                writeHead(out, disposition, name, fn, field.type(), guess, field.headers(), files);
+                writeHead(out, disposition, name, fn, field.type(), guess, field, files);
                 out.write(ByteText.encode(field.value()));
                 break;
             }
             case FILE_CONTENT: {
                 byte[] data = files.read(field.value());
-                writeHead(out, disposition, name, null, field.type(), null, field.headers(), files);
+                writeHead(out, disposition, name, null, field.type(), null, field, files);
                 out.write(data);
                 break;
             }
             case FILE_UPLOAD: {
                 byte[] data = files.read(field.value());
                 writeHead(out, disposition, name, uploadName(field), field.type(), uploadGuess(field),
-                        field.headers(), files);
+                        field, files);
                 out.write(data);
                 break;
             }
@@ -146,11 +146,11 @@ public final class MultipartBuilder {
                 }
                 String inner = randomBoundary(innerRandom);
                 writeHead(out, disposition, name, null, "multipart/mixed; boundary=" + inner, null,
-                        List.of(), files);
+                        null, files);
                 for (FormField f : list) {
                     byte[] data = files.read(f.value());
                     put(out, "--" + inner + "\r\n");
-                    writeHead(out, "attachment", "", uploadName(f), f.type(), uploadGuess(f), f.headers(), files, true);
+                    writeHead(out, "attachment", "", uploadName(f), f.type(), uploadGuess(f), f, files, true);
                     out.write(data);
                     put(out, "\r\n");
                 }
@@ -181,13 +181,8 @@ public final class MultipartBuilder {
 
     // ---- part head ----
 
-    private static String baseName(String path) {
-        int slash = path.lastIndexOf('/');
-        return slash >= 0 ? path.substring(slash + 1) : path;
-    }
-
     private static String uploadName(FormField f) {
-        return f.filename() != null ? f.filename() : baseName(f.value());
+        return f.filename() != null ? f.filename() : PathNames.formFileName(f.value());
     }
 
     /** Guess for an upload: from filename= when its extension is known, else from the path; stdin gets none. */
@@ -201,20 +196,22 @@ public final class MultipartBuilder {
         if (f.value().equals("-")) {
             return null;
         }
-        String g = knownType(baseName(f.value()));
+        String g = knownType(PathNames.formFileName(f.value()));
         return g != null ? g : "application/octet-stream";
     }
 
     private void writeHead(ByteArrayOutputStream out, String disposition, String name, String filename, String type,
-                           String guess, List<String> headers, FileAccess files) throws IOException {
-        writeHead(out, disposition, name, filename, type, guess, headers, files, false);
+                           String guess, FormField owner, FileAccess files) throws IOException {
+        writeHead(out, disposition, name, filename, type, guess, owner, files, false);
     }
 
     private void writeHead(ByteArrayOutputStream out, String disposition, String name, String filename, String type,
-                           String guess, List<String> headers, FileAccess files, boolean nested) throws IOException {
+                           String guess, FormField owner, FileAccess files, boolean nested) throws IOException {
         List<String> user = new ArrayList<>();
-        for (String h : headers) {
-            if (FormField.isHeaderFile(h)) {
+        List<String> headers = owner == null ? List.of() : owner.headers();
+        for (int i = 0; i < headers.size(); i++) {
+            String h = headers.get(i);
+            if (owner.isHeaderFile(i)) {
                 byte[] data = files.read(h.substring(1));
                 for (String line : ByteText.decode(data).split("\r?\n|\r")) {
                     if (!line.isEmpty()) {

@@ -120,4 +120,21 @@ class FormFieldTest {
     void angleBracketDoesNotSplitOnComma() throws Exception {
         assertEquals("a,b", FormField.parse("f=<a,b").value());
     }
+
+    @Test
+    void quotedHeadersValueIsNeverAFileReference() throws Exception {
+        // measured with curl 8.7.1: the @ or < is a file marker only as the first character, unquoted
+        for (String marker : new String[] {"@", "<"}) {
+            FormField q = FormField.parse("a=b;headers=\"" + marker + "lit: x\"");
+            assertEquals(List.of(marker + "lit: x"), q.headers());
+            assertEquals(false, q.isHeaderFile(0));
+            assertEquals(List.of(), q.filePaths());
+            FormField f = FormField.parse("a=b;headers=" + marker + "hdr.txt");
+            assertEquals(true, f.isHeaderFile(0));
+            assertEquals(List.of("hdr.txt"), f.filePaths());
+            FormField mq = FormField.parse("a=b;headers=" + marker + "\"hdr.txt\"");
+            assertEquals(true, mq.isHeaderFile(0));
+            assertEquals(List.of("hdr.txt"), mq.filePaths());
+        }
+    }
 }

@@ -32,7 +32,7 @@ public final class Curl {
         } catch (CurlParseException e) {
             throw e;
         } catch (RuntimeException | StackOverflowError e) {
-            throw new CurlParseException("The pasted text could not be parsed (" + e + ")");
+            throw new CurlParseException("The pasted text could not be parsed (" + e.getClass().getSimpleName() + ")");
         }
     }
 
@@ -175,9 +175,12 @@ public final class Curl {
             return new byte[0];
         };
         try {
-            CurlCommandParser.Parsed p = CurlCommandParser.parse(args, cmd, recorder);
-            warnings.addAll(p.warnings);
-            runs.add(new ParsedCurlImpl.Run(cmd, args, p.operations, read));
+            CurlCommandParser.Parsed p = CurlCommandParser.parse(args, cmd, recorder, true);
+            if (!p.contentDependent) {
+                // with file variables the warnings can differ once the files are read: build() reports those
+                warnings.addAll(p.warnings);
+            }
+            runs.add(new ParsedCurlImpl.Run(cmd, args, p.operations, read, p.contentDependent));
         } catch (CurlParseException e) {
             errors.add(e);
         }
@@ -201,8 +204,7 @@ public final class Curl {
             "(");
 
     private static String baseName(String w) {
-        int cut = Math.max(w.lastIndexOf('/'), w.lastIndexOf('\\'));
-        return w.substring(cut + 1).toLowerCase(Locale.ROOT);
+        return PathNames.baseName(w, true).toLowerCase(Locale.ROOT);
     }
 
     /**

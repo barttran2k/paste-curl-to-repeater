@@ -79,6 +79,11 @@ public final class LocalFiles implements FileAccess, PasteCurlAction.FileProbe {
     }
 
     @Override
+    public String homeDirectory() {
+        return home.toString();
+    }
+
+    @Override
     public PasteCurlAction.FileInfo describe(String path) {
         Path p;
         try {

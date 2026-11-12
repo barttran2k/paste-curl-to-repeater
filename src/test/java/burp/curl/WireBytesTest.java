@@ -58,6 +58,6 @@ class WireBytesTest {
         for (Warning x : d.request().warnings()) {
             assertFalse(x.message().chars().anyMatch(c -> c >= 0xdc00 && c <= 0xdfff), x.message());
         }
-        assertTrue(d.request().warnings().stream().anyMatch(x -> x.message().contains("us�r")));
+        assertTrue(d.request().warnings().stream().anyMatch(x -> x.message().contains("-u")));
     }
 }

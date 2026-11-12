@@ -83,7 +83,7 @@ public final class CurlUrl {
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (c < 0x20 || c == 0x7f) {
-                throw new CurlParseException("URL rejected: malformed input (control character)", i);
+                throw new CurlParseException("URL rejected: malformed input (control character)");
             }
         }
         // scheme
@@ -120,7 +120,7 @@ public final class CurlUrl {
             }
         }
         if (!scheme.equals("http") && !scheme.equals("https")) {
-            throw new CurlParseException("unsupported protocol: " + scheme);
+            throw new CurlParseException("unsupported protocol");
         }
 
         // fragment, authority, path, query
@@ -341,14 +341,14 @@ public final class CurlUrl {
                 if (c == ' ') {
                     sb.append("%20");
                 } else if (ByteText.isEscape(c)) {
-                    sb.append('%').append(HEX_LOWER[(c >> 4) & 15]).append(HEX_LOWER[c & 15]);
+                    PercentEncoding.append(sb, c, false);
                 } else {
                     int cp = p.codePointAt(i);
                     if (Character.charCount(cp) == 2) {
                         i++;
                     }
                     for (byte b : new String(Character.toChars(cp)).getBytes(StandardCharsets.UTF_8)) {
-                        sb.append('%').append(HEX_LOWER[(b >> 4) & 15]).append(HEX_LOWER[b & 15]);
+                        PercentEncoding.append(sb, b, false);
                     }
                 }
             } else if (sb != null) {
@@ -357,8 +357,6 @@ public final class CurlUrl {
         }
         return sb == null ? p : sb.toString();
     }
-
-    private static final char[] HEX_LOWER = "0123456789abcdef".toCharArray();
 
     /** RFC 3986 section 5.2.4, applied to a path that starts with "/". */
     static String removeDotSegments(String in) {
@@ -743,7 +741,7 @@ public final class CurlUrl {
                     || c == '_' || c == '~') {
                 sb.append((char) c);
             } else {
-                sb.append('%').append(HEX_LOWER[c >> 4]).append(HEX_LOWER[c & 15]);
+                PercentEncoding.append(sb, c, false);
             }
         }
         return new CurlUrl(scheme, hostText, ipv6, explicitPort, user, password, removeDotSegments(sb.toString()),
