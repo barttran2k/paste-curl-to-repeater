@@ -1,0 +1,1 @@
+curl -z 'Sun, 06 Nov 1994 08:49:37 GMT' -r 0-9 -e http://r.example/ -b a=1 __BASE__/t

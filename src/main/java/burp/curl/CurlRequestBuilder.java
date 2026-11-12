@@ -298,12 +298,14 @@ final class CurlRequestBuilder {
             return null;
         }
         CookieJar jar = new CookieJar();
+        w.add(Warning.note("Cookies from the -b file were chosen for this URL by domain, path, secure flag and "
+                + "expiry as of now; curl decides the same way when it sends the request"));
         for (String f : op.cookieFiles) {
             byte[][] r = readData(op, f, w);
             if (r[1] == null) {
                 jar.addPlaceholder(new String(r[0], StandardCharsets.UTF_8));
             } else {
-                jar.load(r[0], now);
+                jar.load(r[0], now, op.junkSessionCookies);
             }
         }
         return jar;

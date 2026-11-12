@@ -1,0 +1,1 @@
+curl --proto-default https __BASE__/x

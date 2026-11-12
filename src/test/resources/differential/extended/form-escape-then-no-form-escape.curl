@@ -1,0 +1,1 @@
+curl --form-escape --no-form-escape -F 'a"b=c' __BASE__/f

@@ -1,0 +1,3 @@
+curl --variable v@- --expand-data '{{v:trim}}' __BASE__/x <<'EOF'
+  from stdin  
+EOF

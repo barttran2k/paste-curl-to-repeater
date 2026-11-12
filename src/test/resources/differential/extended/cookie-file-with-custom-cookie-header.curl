@@ -1,0 +1,1 @@
+curl -b cookies.txt -H 'Cookie: z=1' __BASE__/c

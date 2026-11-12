@@ -1,0 +1,1 @@
+curl --variable a_1=ok --expand-data '{{a_1}}' __BASE__/x

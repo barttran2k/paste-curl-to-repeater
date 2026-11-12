@@ -1,0 +1,1 @@
+curl -G -d a=1 --request-target '/t' __BASE__/ignored

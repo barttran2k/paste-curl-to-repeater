@@ -100,8 +100,8 @@ public final class Operation {
     String protoDefault;
     /** {@code -b} arguments that name a cookie file */
     final List<String> cookieFiles = new ArrayList<>();
-    /** true once {@code -b} or {@code -c} switched curl's cookie engine on */
-    boolean cookieEngine;
+    /** {@code -j}: session cookies read from a cookie file are dropped */
+    boolean junkSessionCookies;
     /** warnings that depend on file contents (variable files); added to every request built from this operation */
     final List<Warning> lateWarnings = new ArrayList<>();
 

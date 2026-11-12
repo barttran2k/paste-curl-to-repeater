@@ -1,0 +1,1 @@
+curl -T a.txt --url-query 'a=1' __BASE__/q/

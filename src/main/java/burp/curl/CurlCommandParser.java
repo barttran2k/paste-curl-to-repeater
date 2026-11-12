@@ -179,14 +179,13 @@ public final class CurlCommandParser {
             case "referer" -> op.referer = text(arg);
             case "cookie" -> {
                 String c = text(arg);
-                op.cookieEngine = true;
                 if (c.indexOf('=') >= 0) {
                     op.cookies.add(c);
                 } else if (!c.isEmpty()) {
                     op.cookieFiles.add(c);
                 }
             }
-            case "cookie-jar" -> op.cookieEngine = true;
+            case "junk-session-cookies" -> op.junkSessionCookies = !negated;
             case "variable" -> variables.define(arg, this::readStdin, files, lateWarnings);
             case "form" -> addForm(arg, false);
             case "form-string" -> addForm(arg, true);

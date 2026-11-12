@@ -1,0 +1,6 @@
+curl -H @- __BASE__/h <<'EOF'
+X-In: 1
+# a comment
+X-Two: 2
+
+EOF

@@ -29,6 +29,7 @@ final class CookieJar {
     private final List<Cookie> cookies = new ArrayList<>();
     private final List<String> placeholders = new ArrayList<>();
     private long counter;
+    private boolean junkSession;
 
     /** Remembers text that stands for a cookie file that could not be read; it is sent before the cookies. */
     void addPlaceholder(String text) {
@@ -40,8 +41,9 @@ final class CookieJar {
         return placeholders;
     }
 
-    /** Reads the whole text of a cookie file. */
-    void load(byte[] file, long now) {
+    /** Reads the whole text of a cookie file; with {@code junkSession} (-j) session cookies are dropped. */
+    void load(byte[] file, long now, boolean junkSession) {
+        this.junkSession = junkSession;
         String text = new String(file, StandardCharsets.UTF_8);
         for (String raw : text.split("\n", -1)) {
             String line = raw;
@@ -156,6 +158,9 @@ final class CookieJar {
     }
 
     private void store(Cookie c, long now) {
+        if (junkSession && c.expires == 0) {
+            return;
+        }
         boolean expired = c.expires > 0 && c.expires <= now;
         for (int i = 0; i < cookies.size(); i++) {
             Cookie o = cookies.get(i);

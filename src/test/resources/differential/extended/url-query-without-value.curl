@@ -1,0 +1,1 @@
+curl --url-query 'flag' --url-query '+raw=1' __BASE__/q

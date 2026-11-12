@@ -72,13 +72,13 @@ final class CurlDate {
                 return 0;
             }
             if (c >= 'A' && c <= 'I') {
-                return -60 * (c - 'A' + 1);
+                return 60 * (c - 'A' + 1);
             }
             if (c >= 'K' && c <= 'M') {
-                return -60 * (c - 'K' + 10);
+                return 60 * (c - 'K' + 10);
             }
             if (c >= 'N' && c <= 'Y') {
-                return 60 * (c - 'N' + 1);
+                return -60 * (c - 'N' + 1);
             }
         }
         return null;
@@ -171,11 +171,10 @@ final class CurlDate {
                     if (!found && !nextIsMday && year == -1) {
                         year = val;
                         found = true;
-                        if (year < 1900) {
-                            if (year >= 100) {
-                                return null;
-                            }
+                        if (year < 100) {
                             year += year > 70 ? 1900 : 2000;
+                        } else if (year < 1583) {
+                            return null; // measured: curl 8.7.1 rejects the years 100 to 1582
                         }
                         if (mday == -1) {
                             nextIsMday = true;
