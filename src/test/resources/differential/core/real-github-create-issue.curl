@@ -1,7 +1,7 @@
 curl -L \
   -X POST \
   -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE" \
+  -H "Authorization: Bearer FAKE_GITHUB_TOKEN_FOR_TESTS" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   __BASE__/repos/octo-org/octo-repo/issues \
   -d '{"title":"Found a bug","body":"I am having a problem with this.","assignees":["octocat"],"labels":["bug"]}'

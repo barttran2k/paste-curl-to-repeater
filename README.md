@@ -26,30 +26,51 @@ A new Repeater tab opens with the request, sent to the host, port and scheme nam
 
 ## What is supported
 
-- bash and zsh syntax: quoting, `$'...'`, line continuations, heredocs, `$VAR` assignments in front of the command,
-  several commands.
-- Windows cmd syntax, as produced by "Copy as cURL (cmd)" in Chrome and Edge.
+- bash and zsh syntax: quoting, `$'...'`, line continuations, heredocs, `NAME=value` assignments and wrappers such as
+  `sudo`, `env` or `time` in front of the command, several commands. Shell expansions (`$VAR`, `$(...)`, backticks,
+  and `%VAR%` in cmd) are not evaluated: they stay as literal text and a warning says so.
+- Windows cmd syntax: "Copy as cURL (cmd)" from Chrome and Edge, "Copy as cURL (Windows)" from Firefox, and
+  hand-written cmd commands (bare-quoted arguments follow the rules of the Microsoft C runtime, so backslashes are
+  literal unless they precede a quote).
 - "Copy as cURL" from Chrome, Firefox and Safari, and cURL commands exported by Postman.
 - Multi-line commands.
 - Several commands or `--next` groups, each becoming its own tab.
 - `@file` arguments, with the confirmation described above.
 - The curl options listed in `src/main/resources/curl-options.tsv` (request line, headers, cookies, data, forms, basic
   and bearer auth, `--json`, `--compressed`, `-G`, ...). Options that only affect curl itself are accepted and ignored.
+- Raw bytes that are not valid UTF-8 are kept as they are in headers, cookies, the URL, form fields, credentials and
+  bodies.
 
 ## How fidelity is checked
 
-The test suite contains a differential test: each case in a corpus of cURL commands is run through the real shell and
-the real curl binary against a local capture server, and the bytes curl sent are compared with the bytes this
-extension builds. The tests need `curl` and `bash` on the machine and run as part of `mvn test`.
+Three layers, all run by `mvn test`:
+
+- A differential test: each of the 617 cases in a corpus of cURL commands (`src/test/resources/differential`) is run
+  through the real shell and the real curl binary against a local capture server, and the bytes curl sent are compared
+  with the bytes this extension builds.
+- Round-trip tests: ports of the Chrome, Firefox and Safari "Copy as cURL" generators produce commands that must come
+  back as the original request. The ports are validated against the original JavaScript under node.
+- A seeded fuzz test: random command lines must either build well-formed requests or end in a parse error.
+
+The differential and generator tests need `curl` and `bash` 4.2 or newer on the machine; the generator validation also
+needs `node`. When a tool is missing those parts are skipped.
 
 ## Known limitations
 
 - PowerShell syntax is not supported.
 - URL globbing (`[1-5]`, `{a,b}`) is not expanded.
-- Digest, NTLM, Negotiate and AWS SigV4 authentication are not computed; the request is built without the
-  computed credentials and the warning dialog says so.
+- Digest, NTLM, Negotiate and AWS SigV4 authentication are not computed and the warning dialog says so. With Digest
+  or `--anyauth` no `Authorization` header is sent on the request, as in curl's first request; for NTLM and Negotiate
+  curl's initial token is not reproduced.
 - `-K` / `--config` files are not read.
-- Raw non-UTF-8 bytes inside header values are not preserved; they are preserved in bodies.
+- `-z <file>` (a time condition taken from a file's modification time) is not applied.
+- `-F name=...;encoder=...` is rejected with a warning and the field is skipped.
+- Cookie files (`-b <file>`) are evaluated at paste time, against the current time.
+- A path that only appears inside the contents of another file (for example through `--variable name@file`) is never
+  read; it becomes a `<<FILE: path>>` placeholder with a warning.
+- IDN host names are sent as punycode (a curl built without libidn2 sends the raw UTF-8 name in `Host:`).
+- For stdin uploads (`-T -`) the request carries `Transfer-Encoding: chunked` and `Expect: 100-continue`, as curl sends
+  them.
 - The HTTP protocol version is left to Burp (the request is written as HTTP/1.1; `--http2` and friends are not applied).
 - Anything that depends on the network or on the machine (redirects, proxies, DNS overrides, TLS options, timeouts) is
   not applied by Repeater.
@@ -69,7 +90,7 @@ Montoya API; Burp provides it.
 
 ## Install
 
-1. Build the jar, or download a release.
+1. Build the jar (see Build).
 2. In Burp: Extensions -> Installed -> Add.
 3. Extension type: Java. Select the jar. Next.
 4. The extension "Paste cURL" appears in the list. The menu item is under Extensions -> Paste cURL when you right-click.

@@ -12,6 +12,6 @@ curl 'http://__HOSTPORT__/api/v2/users/42?notify=true' \
   -H 'Sec-Fetch-Mode: cors' \
   -H 'Sec-Fetch-Site: same-origin' \
   -H 'Priority: u=0' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXIifQ.ZmFrZS1zaWduYXR1cmU' \
+  -H 'Authorization: Bearer FAKE_JWT_FOR_TESTS' \
   -H 'Content-Type: application/json' \
   --data-raw $'{"email":"alice@example.test","roles":["admin","dev"],"profile":{"name":"Alice \\"Al\\" O\'Neil","bio":null}}'

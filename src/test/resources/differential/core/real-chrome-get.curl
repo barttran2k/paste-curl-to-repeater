@@ -1,7 +1,7 @@
 curl '__BASE__/api/v2/users?page=2&per_page=50&sort=-created' \
   -H 'accept: application/json, text/plain, */*' \
   -H 'accept-language: en-US,en;q=0.9,vi;q=0.8' \
-  -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMifQ.c2lnbmF0dXJl' \
+  -H 'authorization: Bearer FAKE_JWT_FOR_TESTS' \
   -H 'cache-control: no-cache' \
   -b '_ga=GA1.2.111.222; session=abcdef0123456789; theme=dark' \
   -H 'origin: https://app.example' \

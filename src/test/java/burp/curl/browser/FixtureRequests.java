@@ -22,7 +22,7 @@ final class FixtureRequests {
     private static final String FIREFOX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0";
     private static final String SAFARI_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15";
     private static final String SEC_CH_UA = "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"";
-    private static final String JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXIifQ.ZmFrZS1zaWduYXR1cmU";
+    private static final String JWT = "Bearer FAKE_JWT_FOR_TESTS";
     private static final String GQL = "{\"operationName\":\"GetUser\",\"variables\":{\"id\":\"42\",\"withPosts\":true},"
             + "\"query\":\"query GetUser($id: ID!, $withPosts: Boolean!) {\\n  user(id: $id) {\\n    id\\n    name\\n"
             + "    posts @include(if: $withPosts) { title }\\n  }\\n}\"}";

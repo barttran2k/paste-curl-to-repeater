@@ -13,6 +13,6 @@ curl --url 'http://__HOSTPORT__/api/v2/items/7' \
   -H 'sec-fetch-mode: cors' \
   -H 'sec-fetch-site: same-origin' \
   -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
-  -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXIifQ.ZmFrZS1zaWduYXR1cmU' \
+  -H 'authorization: Bearer FAKE_JWT_FOR_TESTS' \
   -H 'content-type: application/json-patch+json' \
   --data-raw '[{"op":"replace","path":"/name","value":"New name"}]'

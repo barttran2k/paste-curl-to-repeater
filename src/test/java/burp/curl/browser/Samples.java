@@ -105,7 +105,7 @@ final class Samples {
         l.add(n("hdr-json-value", "GET", "https://example.test/h", null, h("X-Json", "{\"a\":[1,2,{\"b\":null}],\"c\":\"d\"}")));
         l.add(n("hdr-etag-weak", "GET", "https://example.test/h", null, h("If-None-Match", "W/\"33a64df551425fcc55e4d42a148795d9f25f89d4\"")));
         l.add(n("hdr-authorization", "GET", "https://example.test/h", null,
-                h("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U")));
+                h("Authorization", "Bearer FAKE_JWT_FOR_TESTS")));
         l.add(n("hdr-basic-auth-colon", "GET", "https://example.test/h", null, h("Authorization", "Basic dXNlcjpwYXNz"),
                 h("X-Url", "https://a.test:8080/x?y=1")));
         l.add(n("hdr-referer-origin", "GET", "https://example.test/h", null, h("Referer", "https://example.test/a?b=c&d=e#f"),

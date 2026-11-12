@@ -12,4 +12,4 @@ curl.exe ^"http://__HOSTPORT__/api/v2/items/7^" ^
   -H ^"Sec-Fetch-Mode: cors^" ^
   -H ^"Sec-Fetch-Site: same-origin^" ^
   -H ^"Priority: u=0^" ^
-  -H ^"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXIifQ.ZmFrZS1zaWduYXR1cmU^"
+  -H ^"Authorization: Bearer FAKE_JWT_FOR_TESTS^"

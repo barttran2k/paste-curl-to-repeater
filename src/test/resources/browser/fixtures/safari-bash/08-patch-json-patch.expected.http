@@ -6,7 +6,7 @@ Origin: http://__HOSTPORT__
 Referer: http://__HOSTPORT__/app/users/42
 User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15
 Cookie: session=fake-session-id; csrftoken=fake-csrf-token
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXIifQ.ZmFrZS1zaWduYXR1cmU
+Authorization: Bearer FAKE_JWT_FOR_TESTS
 Content-Type: application/json-patch+json
 Content-Length: 52
 
