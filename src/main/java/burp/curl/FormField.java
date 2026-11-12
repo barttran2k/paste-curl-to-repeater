@@ -11,6 +11,11 @@ import java.util.List;
  * {@code ;headers=} values verbatim; an entry starting with {@code @} or {@code <} names a file of header lines
  * (resolved by {@link MultipartBuilder}).
  *
+ * <p>Strings: {@code name}, {@code value} of a {@link Kind#LITERAL}, {@code type}, {@code filename} and {@code headers}
+ * are wire text ({@link ByteText}: they keep the exact bytes of the argument and are encoded with
+ * {@link ByteText#encode}). {@code value} of the file kinds and the entries of {@code headers} that name a file are
+ * plain paths (lossy UTF-8, never sent as they are).
+ *
  * <p>Extension to the three basic kinds: {@code name=@a,b} (several files in one field) is represented as
  * {@link Kind#FILE_LIST} whose {@code value} is the raw text after the {@code @}; use {@link #filePaths()} to list the
  * files and {@link #files()} to get one {@code FILE_UPLOAD} field per file (each with its own type/filename/headers).
