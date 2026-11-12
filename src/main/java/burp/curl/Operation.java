@@ -153,7 +153,7 @@ public final class Operation {
             }
             if (p.file.equals("-")) {
                 stdinUsed = true;
-            } else {
+            } else if (!p.file.isEmpty()) {
                 refs.add(p.file);
             }
         }
@@ -161,7 +161,7 @@ public final class Operation {
             if (q.file != null) {
                 if (q.file.equals("-")) {
                     stdinUsed = true;
-                } else {
+                } else if (!q.file.isEmpty()) {
                     refs.add(q.file);
                 }
             }
@@ -170,7 +170,7 @@ public final class Operation {
             for (String path : f.filePaths()) {
                 if (path.equals("-")) {
                     stdinUsed = true;
-                } else {
+                } else if (!path.isEmpty()) {
                     refs.add(path);
                 }
             }
@@ -178,7 +178,7 @@ public final class Operation {
         for (String u : uploads) {
             if (u.equals("-")) {
                 stdinUsed = true;
-            } else {
+            } else if (!u.isEmpty()) {
                 refs.add(u);
             }
         }
@@ -186,13 +186,17 @@ public final class Operation {
             if (h.startsWith("@")) {
                 if (h.equals("@-")) {
                     stdinUsed = true;
-                } else {
+                } else if (h.length() > 1) {
                     refs.add(h.substring(1));
                 }
             }
         }
-        refs.addAll(cookieFiles);
-        if (stdinUsed && stdin != null && stdin.bytes == null && stdin.file != null) {
+        for (String c : cookieFiles) {
+            if (!c.isEmpty()) {
+                refs.add(c);
+            }
+        }
+        if (stdinUsed && stdin != null && stdin.bytes == null && stdin.file != null && !stdin.file.isEmpty()) {
             refs.add(stdin.file);
         }
     }

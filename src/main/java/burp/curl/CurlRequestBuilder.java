@@ -32,21 +32,6 @@ final class CurlRequestBuilder {
         this.files = files;
     }
 
-    /**
-     * @param operations the operations in order
-     * @param files file access for {@code @file} data
-     * @return one entry per URL per operation, in order
-     * @throws CurlParseException when a URL is invalid or unsupported
-     */
-    static List<RequestDetails> build(List<Operation> operations, FileAccess files) throws CurlParseException {
-        CurlRequestBuilder b = new CurlRequestBuilder(files);
-        List<RequestDetails> result = new ArrayList<>();
-        for (Operation op : operations) {
-            b.buildOperation(op, result);
-        }
-        return result;
-    }
-
     /** What a request carries as its body, before the headers are written. */
     private static final class Body {
         /** bytes as sent on the wire (for a chunked body set once the header block is known) */
@@ -763,32 +748,16 @@ final class CurlRequestBuilder {
 
     /** @return {bytes, non-null marker when really read}; on failure the placeholder and a warning */
     private byte[][] readData(Operation op, String path, List<Warning> w) {
+        FileReads.Result r;
         if (path.equals("-")) {
-            Operation.StdinSource s = op.stdin;
-            if (s != null && s.bytes != null) {
-                return new byte[][] {stdinOnce(s, s.bytes), new byte[0]};
+            r = FileReads.readStdin(op.stdin, files, w);
+            if (r.ok()) {
+                r = new FileReads.Result(stdinOnce(op.stdin, r.bytes()), true);
             }
-            if (s != null && s.file != null) {
-                byte[][] r = readData(op, s.file, w);
-                if (r[1] != null) {
-                    r[0] = stdinOnce(s, r[0]);
-                }
-                return r;
-            }
-            w.add(Warning.lossy("The command reads its data from stdin (@-) but no stdin content was pasted"));
-            return new byte[][] {"<<STDIN>>".getBytes(StandardCharsets.UTF_8), null};
+        } else {
+            r = FileReads.read(files, path, w);
         }
-        try {
-            byte[] b = files.read(path);
-            if (b != null) {
-                return new byte[][] {b, new byte[0]};
-            }
-        } catch (IOException | RuntimeException e) {
-            w.add(Warning.lossy("Could not read " + path + " (" + e.getMessage() + "); a placeholder was used"));
-            return new byte[][] {placeholder(path), null};
-        }
-        w.add(Warning.lossy("Could not read " + path + "; a placeholder was used"));
-        return new byte[][] {placeholder(path), null};
+        return new byte[][] {r.bytes(), r.ok() ? new byte[0] : null};
     }
 
     /** curl reads stdin once: a second {@code @-} sees nothing. */
@@ -797,10 +766,6 @@ final class CurlRequestBuilder {
             return new byte[0];
         }
         return data;
-    }
-
-    private static byte[] placeholder(String path) {
-        return ("<<FILE: " + path + ">>").getBytes(StandardCharsets.UTF_8);
     }
 
     private static byte[] stripNewlines(byte[] in) {

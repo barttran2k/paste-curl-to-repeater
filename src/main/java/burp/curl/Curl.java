@@ -175,9 +175,12 @@ public final class Curl {
             return new byte[0];
         };
         try {
-            CurlCommandParser.Parsed p = CurlCommandParser.parse(args, cmd, recorder);
-            warnings.addAll(p.warnings);
-            runs.add(new ParsedCurlImpl.Run(cmd, args, p.operations, read));
+            CurlCommandParser.Parsed p = CurlCommandParser.parse(args, cmd, recorder, true);
+            if (!p.contentDependent) {
+                // with file variables the warnings can differ once the files are read: build() reports those
+                warnings.addAll(p.warnings);
+            }
+            runs.add(new ParsedCurlImpl.Run(cmd, args, p.operations, read, p.contentDependent));
         } catch (CurlParseException e) {
             errors.add(e);
         }

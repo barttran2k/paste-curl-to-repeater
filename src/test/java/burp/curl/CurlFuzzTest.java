@@ -251,9 +251,15 @@ class CurlFuzzTest {
                 continue;
             }
             try {
-                p.fileRefs();
+                List<String> refs = p.fileRefs();
+                assertTrue(!refs.contains(""), "empty file reference for:\n" + input);
                 p.warnings();
-                for (FileAccess files : new FileAccess[] {FileAccess.DENY, randomFiles(r)}) {
+                for (FileAccess files0 : new FileAccess[] {FileAccess.DENY, randomFiles(r)}) {
+                    List<String> reads = new ArrayList<>();
+                    FileAccess files = path -> {
+                        reads.add(path);
+                        return files0.read(path);
+                    };
                     for (RequestDetails d : p.detailsUnguarded(files)) {
                         checkWellFormed(d.request(), input);
                         built++;
@@ -265,6 +271,8 @@ class CurlFuzzTest {
                             }
                         }
                     }
+                    assertTrue(refs.containsAll(reads), "read " + reads + " but fileRefs() is " + refs + " for:\n"
+                            + input);
                 }
                 // the public entry points must agree: success or CurlParseException
                 Curl.parse(input).build(randomFiles(r));

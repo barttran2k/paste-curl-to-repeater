@@ -1,6 +1,5 @@
 package burp.curl;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,20 +21,26 @@ public final class CurlCommandParser {
     static final class Parsed {
         final List<Operation> operations = new ArrayList<>();
         final List<Warning> warnings = new ArrayList<>();
-        /** files the variables ({@code --variable name@file}) read */
-        final List<String> variableFiles = new ArrayList<>();
+        /**
+         * true when some variable got its content from a file: the options that use it can mean something else
+         * once the file is really read, so {@link #warnings} of a probe parse may not match the real parse
+         */
+        boolean contentDependent;
     }
 
     private final CurlOptionTable table = CurlOptionTable.get();
     private final Parsed out = new Parsed();
     private final Operation.StdinSource stdin;
     private final FileAccess files;
+    /** true for the parse that only collects file references (no file contents are available) */
+    private final boolean probe;
     private final CurlVariables variables = new CurlVariables();
     private final List<Warning> lateWarnings = new ArrayList<>();
     private Operation current = new Operation();
 
-    private CurlCommandParser(CommandLine command, FileAccess files) {
+    private CurlCommandParser(CommandLine command, FileAccess files, boolean probe) {
         this.files = files;
+        this.probe = probe;
         this.stdin = command.stdin() != null || command.stdinFile() != null
                 ? new Operation.StdinSource(command.stdin(), command.stdinFile()) : null;
         current.stdin = stdin;
@@ -48,17 +53,22 @@ public final class CurlCommandParser {
      * @throws CurlParseException on a missing option argument or when no operation has a URL
      */
     static Parsed parse(List<Token> args, CommandLine command) throws CurlParseException {
-        return parse(args, command, FileAccess.DENY);
+        return parse(args, command, FileAccess.DENY, false);
     }
 
     /**
      * Like {@link #parse(List, CommandLine)} with access to the files that variables read at parse time.
      *
      * @param files source of {@code --variable name@file} contents
+     * @param probe true when {@code files} only records the paths: arguments that were expanded with the content of
+     *              a file variable are then replaced by harmless ones, because the paths they would name are not
+     *              known yet and must not be listed
      */
-    static Parsed parse(List<Token> args, CommandLine command, FileAccess files) throws CurlParseException {
-        CurlCommandParser p = new CurlCommandParser(command, files);
+    static Parsed parse(List<Token> args, CommandLine command, FileAccess files, boolean probe)
+            throws CurlParseException {
+        CurlCommandParser p = new CurlCommandParser(command, files, probe);
         p.walk(args);
+        p.out.contentDependent = p.variables.anyFromFile();
         return p.out;
     }
 
@@ -164,10 +174,20 @@ public final class CurlCommandParser {
     /** Applies one option to the current operation. {@code arg} is null for options without argument. */
     private void apply(OptionSpec spec, boolean negated, boolean expand, byte[] arg) {
         String opt = "--" + spec.longName();
+        boolean fromFileContent = false;
         if (expand && arg != null) {
             byte[] expanded = variables.expand(arg, lateWarnings, "--expand-" + spec.longName());
             if (expanded != null) {
                 arg = expanded;
+                fromFileContent = variables.lastExpansionUsedFileContent();
+            }
+        }
+        if (probe && fromFileContent && !spec.longName().equals("variable")) {
+            if (spec.longName().equals("upload-file")) {
+                return;
+            }
+            if (FILE_PATH_OPTIONS.contains(spec.longName())) {
+                arg = NEUTRAL_ARG;
             }
         }
         Operation op = current;
@@ -192,7 +212,8 @@ public final class CurlCommandParser {
                 }
             }
             case "junk-session-cookies" -> op.junkSessionCookies = !negated;
-            case "variable" -> variables.define(arg, this::readStdin, files, lateWarnings);
+            case "variable" -> variables.define(arg, stdin, probe && fromFileContent ? FileAccess.DENY : files,
+                    lateWarnings, fromFileContent);
             case "form" -> addForm(arg, false);
             case "form-string" -> addForm(arg, true);
             case "form-escape" -> op.formEscape = !negated;
@@ -253,6 +274,12 @@ public final class CurlCommandParser {
         }
     }
 
+    /** Options whose argument can name a local file. */
+    private static final java.util.Set<String> FILE_PATH_OPTIONS = java.util.Set.of("data", "data-ascii",
+            "data-binary", "data-raw", "data-urlencode", "json", "url-query", "form", "header", "cookie");
+    /** An argument of every {@link #FILE_PATH_OPTIONS} option that names no file. */
+    private static final byte[] NEUTRAL_ARG = {'x', '=', '1'};
+
     /** Options that select a proxy for the transfer. */
     private static final java.util.Set<String> PROXY_OPTIONS = java.util.Set.of("proxy", "preproxy", "socks4",
             "socks4a", "socks5", "socks5-hostname");
@@ -300,26 +327,6 @@ public final class CurlCommandParser {
         if (warn) {
             out.warnings.add(Warning.lossy(optionWarning(opt.substring(2), opt, null)));
         }
-    }
-
-    private byte[] readStdin(List<Warning> w) {
-        if (stdin != null && stdin.bytes != null) {
-            return stdin.bytes;
-        }
-        if (stdin != null && stdin.file != null) {
-            try {
-                byte[] b = files.read(stdin.file);
-                if (b != null) {
-                    return b;
-                }
-            } catch (IOException | RuntimeException e) {
-                w.add(Warning.lossy("Could not read " + stdin.file + " (" + e.getMessage()
-                        + "); a placeholder was used"));
-                return ("<<FILE: " + stdin.file + ">>").getBytes(StandardCharsets.UTF_8);
-            }
-        }
-        w.add(Warning.lossy("The command reads stdin (@-) but no stdin content was pasted"));
-        return "<<STDIN>>".getBytes(StandardCharsets.UTF_8);
     }
 
     private void addForm(byte[] arg, boolean literal) {

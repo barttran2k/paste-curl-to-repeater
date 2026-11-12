@@ -1,7 +1,6 @@
 package burp.curl;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
@@ -21,9 +20,25 @@ import java.util.Map;
 final class CurlVariables {
     private static final int MAX_NAME = 128;
     private final Map<String, byte[]> vars = new HashMap<>();
+    /** variables whose content comes from a file (directly or through another such variable) */
+    private final java.util.Set<String> fromFiles = new java.util.HashSet<>();
+    private boolean expansionUsedFileContent;
+
+    /** @return true when the last {@link #expand} call inserted the content of a variable that came from a file */
+    boolean lastExpansionUsedFileContent() {
+        return expansionUsedFileContent;
+    }
+
+    /** @return true when some variable got its content from a file */
+    boolean anyFromFile() {
+        return anyFromFile;
+    }
+
+    private boolean anyFromFile;
 
     /** Result of {@link #expand}: the bytes, or null when curl would refuse the argument. */
     byte[] expand(byte[] in, List<Warning> warnings, String option) {
+        expansionUsedFileContent = false;
         ByteArrayOutputStream out = new ByteArrayOutputStream(in.length + 16);
         int i = 0;
         while (i < in.length) {
@@ -69,11 +84,14 @@ final class CurlVariables {
         String[] parts = spec.split(":", -1);
         String name = parts[0];
         if (!validName(name)) {
-            warnings.add(Warning.lossy(option + ": curl refuses the variable expression {{" + spec
-                    + "}}; the argument is used unexpanded"));
+            warnings.add(Warning.lossy(option + ": curl refuses a variable expression with an invalid variable "
+                    + "name; the argument is used unexpanded"));
             return null;
         }
         byte[] v = vars.getOrDefault(name, new byte[0]);
+        if (fromFiles.contains(name)) {
+            expansionUsedFileContent = true;
+        }
         for (int k = 1; k < parts.length; k++) {
             switch (parts[k]) {
                 case "trim" -> v = trim(v);
@@ -81,8 +99,8 @@ final class CurlVariables {
                 case "url" -> v = CurlRequestBuilder.urlEncodeAll(v);
                 case "b64" -> v = Base64.getEncoder().encode(v);
                 default -> {
-                    warnings.add(Warning.lossy(option + ": curl refuses the unknown variable function '"
-                            + parts[k] + "' in {{" + spec + "}}; the argument is used unexpanded"));
+                    warnings.add(Warning.lossy(option + ": curl refuses an unknown variable function in a "
+                            + "variable expression; the argument is used unexpanded"));
                     return null;
                 }
             }
@@ -146,10 +164,13 @@ final class CurlVariables {
      * Applies one {@code --variable} argument.
      *
      * @param arg {@code name=content}, {@code name@file}, {@code %name}, {@code %name=default}, {@code %name@file}
+     * @param stdin the stdin of the shell command, read for {@code @-}
      * @param files reads {@code @file} contents
-     * @param stdinSource reads {@code @-}
+     * @param fromFileContent true when {@code arg} was expanded with the content of a variable that came from a
+     *                        file: such an argument names a path (or a content) that is not in the command itself
      */
-    void define(byte[] arg, StdinReader stdinSource, FileAccess files, List<Warning> warnings) {
+    void define(byte[] arg, Operation.StdinSource stdin, FileAccess files, List<Warning> warnings,
+                boolean fromFileContent) {
         String s = new String(arg, StandardCharsets.ISO_8859_1);
         boolean env = s.startsWith("%");
         int p = env ? 1 : 0;
@@ -159,18 +180,22 @@ final class CurlVariables {
         }
         String name = s.substring(p, q);
         if (name.isEmpty() || name.length() > MAX_NAME) {
-            warnings.add(Warning.note("--variable: the name in '" + abbreviate(s) + "' is not valid; ignored"));
+            warnings.add(Warning.note("--variable: the argument has no valid variable name; ignored"));
             return;
         }
         char sep = q < s.length() ? s.charAt(q) : 0;
         byte[] content = null;
+        boolean file = false;
         if (sep == '=') {
             content = java.util.Arrays.copyOfRange(arg, q + 1, arg.length);
+            file = fromFileContent;
         } else if (sep == '@') {
-            String file = new String(arg, q + 1, arg.length - q - 1, StandardCharsets.UTF_8);
-            content = readFile(file, stdinSource, files, warnings);
+            String path = new String(arg, q + 1, arg.length - q - 1, StandardCharsets.UTF_8);
+            file = true;
+            content = path.equals("-") ? FileReads.readStdin(stdin, files, warnings).bytes()
+                    : FileReads.read(files, path, warnings).bytes();
         } else if (q < s.length()) {
-            warnings.add(Warning.note("--variable: '" + abbreviate(s) + "' is not name=content or name@file; ignored"));
+            warnings.add(Warning.note("--variable: the argument is not name=content or name@file; ignored"));
             return;
         }
         if (env) {
@@ -178,39 +203,25 @@ final class CurlVariables {
                 warnings.add(Warning.lossy("--variable %" + name + " imports an environment variable that is not "
                         + "known when pasting; {{" + name + "}} expands to nothing"));
                 vars.remove(name);
+                fromFiles.remove(name);
                 return;
             }
             warnings.add(Warning.lossy("--variable %" + name + " imports an environment variable; the default value "
                     + "is used"));
             vars.put(name, content);
+            setFromFile(name, file);
             return;
         }
         vars.put(name, content == null ? new byte[0] : content);
+        setFromFile(name, file);
     }
 
-    private static String abbreviate(String s) {
-        return s.length() > 40 ? s.substring(0, 40) + "..." : s;
-    }
-
-    private static byte[] readFile(String file, StdinReader stdin, FileAccess files, List<Warning> w) {
-        if (file.equals("-")) {
-            return stdin.readStdin(w);
+    private void setFromFile(String name, boolean file) {
+        if (file) {
+            fromFiles.add(name);
+            anyFromFile = true;
+        } else {
+            fromFiles.remove(name);
         }
-        try {
-            byte[] b = files.read(file);
-            if (b != null) {
-                return b;
-            }
-        } catch (IOException | RuntimeException e) {
-            w.add(Warning.lossy("Could not read " + file + " (" + e.getMessage() + "); a placeholder was used"));
-            return ("<<FILE: " + file + ">>").getBytes(StandardCharsets.UTF_8);
-        }
-        w.add(Warning.lossy("Could not read " + file + "; a placeholder was used"));
-        return ("<<FILE: " + file + ">>").getBytes(StandardCharsets.UTF_8);
-    }
-
-    /** Supplies the pasted stdin of the shell command for {@code --variable name@-}. */
-    interface StdinReader {
-        byte[] readStdin(List<Warning> w);
     }
 }

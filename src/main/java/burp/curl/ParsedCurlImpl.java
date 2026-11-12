@@ -20,12 +20,16 @@ final class ParsedCurlImpl implements ParsedCurl {
         final List<Operation> probeOps;
         /** the files variables read during that parse */
         final List<String> variableFiles;
+        /** true when file variables can change what the options mean: the real parse is the authority */
+        final boolean contentDependent;
 
-        Run(CommandLine command, List<Token> args, List<Operation> probeOps, List<String> variableFiles) {
+        Run(CommandLine command, List<Token> args, List<Operation> probeOps, List<String> variableFiles,
+            boolean contentDependent) {
             this.command = command;
             this.args = args;
             this.probeOps = probeOps;
             this.variableFiles = variableFiles;
+            this.contentDependent = contentDependent;
         }
     }
 
@@ -41,7 +45,11 @@ final class ParsedCurlImpl implements ParsedCurl {
     public List<String> fileRefs() {
         Set<String> refs = new LinkedHashSet<>();
         for (Run r : runs) {
-            refs.addAll(r.variableFiles);
+            for (String f : r.variableFiles) {
+                if (!f.isEmpty()) {
+                    refs.add(f);
+                }
+            }
             for (Operation op : r.probeOps) {
                 op.collectFileRefs(refs);
             }
@@ -76,12 +84,16 @@ final class ParsedCurlImpl implements ParsedCurl {
 
     /** {@link #details} without the safety net that turns unexpected runtime failures into parse exceptions. */
     List<RequestDetails> detailsUnguarded(FileAccess files) throws CurlParseException {
-        FileAccess access = files == null ? FileAccess.DENY : files;
+        // only the paths fileRefs() lists were shown to the user: nothing else is ever read
+        FileAccess access = FileReads.guard(files == null ? FileAccess.DENY : files, new LinkedHashSet<>(fileRefs()));
         List<RequestDetails> result = new ArrayList<>();
         CurlRequestBuilder builder = new CurlRequestBuilder(access);
         for (Run r : runs) {
-            CurlCommandParser.Parsed p = CurlCommandParser.parse(r.args, r.command, access);
+            CurlCommandParser.Parsed p = CurlCommandParser.parse(r.args, r.command, access, false);
             for (Operation op : p.operations) {
+                if (r.contentDependent) {
+                    op.lateWarnings.addAll(0, p.warnings);
+                }
                 builder.buildOperation(op, result);
             }
         }
