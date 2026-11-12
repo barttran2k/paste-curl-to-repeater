@@ -1,0 +1,1 @@
+curl "http://"$'%e9:%e4'"@__HOSTPORT__/" "http://"$'\xff:\xc3'"@__HOSTPORT__/p"

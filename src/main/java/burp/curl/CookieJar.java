@@ -1,6 +1,5 @@
 package burp.curl;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -44,7 +43,7 @@ final class CookieJar {
     /** Reads the whole text of a cookie file; with {@code junkSession} (-j) session cookies are dropped. */
     void load(byte[] file, long now, boolean junkSession) {
         this.junkSession = junkSession;
-        String text = new String(file, StandardCharsets.UTF_8);
+        String text = ByteText.decode(file);
         for (String raw : text.split("\n", -1)) {
             String line = raw;
             while (line.endsWith("\r")) {

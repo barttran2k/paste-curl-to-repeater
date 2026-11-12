@@ -146,7 +146,7 @@ final class CurlRequestBuilder {
                 method = "POST";
             } else if (dataBody != null) {
                 if (op.get) {
-                    url = appendQuery(url, new String(dataBody, StandardCharsets.UTF_8), w);
+                    url = appendQuery(url, ByteText.decode(dataBody), w);
                 } else {
                     body = new Body();
                     body.content = dataBody;
@@ -192,9 +192,14 @@ final class CurlRequestBuilder {
                 System.arraycopy(body.wire, 0, raw, head.length, body.wire.length);
             }
             int explicit = url.port() != (url.secure() ? 443 : 80) ? url.port() : -1;
-            BuiltRequest br = new BuiltRequest(url.host(), url.port(), url.secure(), raw, method, url.toString(), w);
-            result.add(new RequestDetails(br, url.scheme(), url.host(), explicit, url.path(), url.query(),
-                    typed, body != null ? body.content : new byte[0]));
+            BuiltRequest br = new BuiltRequest(url.host(), url.port(), url.secure(), raw, ByteText.display(method),
+                    ByteText.display(url.toString()), w);
+            List<String> shownHeaders = new ArrayList<>();
+            for (String h : typed) {
+                shownHeaders.add(ByteText.display(h));
+            }
+            result.add(new RequestDetails(br, url.scheme(), url.host(), explicit, ByteText.display(url.path()),
+                    ByteText.display(url.query()), shownHeaders, body != null ? body.content : new byte[0]));
         }
     }
 
@@ -294,7 +299,7 @@ final class CurlRequestBuilder {
                 out.add("X-Unreadable-Header-File: <<FILE: " + path + ">>");
                 continue;
             }
-            for (String line : new String(r[0], StandardCharsets.UTF_8).split("\n", -1)) {
+            for (String line : ByteText.decode(r[0]).split("\n", -1)) {
                 String l = line.endsWith("\r") ? line.substring(0, line.length() - 1) : line;
                 if (!l.isEmpty() && l.charAt(0) != '#') {
                     out.add(l);
@@ -314,7 +319,7 @@ final class CurlRequestBuilder {
         for (String f : op.cookieFiles) {
             byte[][] r = readData(op, f, w);
             if (r[1] == null) {
-                jar.addPlaceholder(new String(r[0], StandardCharsets.UTF_8));
+                jar.addPlaceholder(ByteText.decode(r[0]));
             } else {
                 jar.load(r[0], now, op.junkSessionCookies);
             }
@@ -351,7 +356,7 @@ final class CurlRequestBuilder {
             }
             joined.writeBytes(ok ? urlencode(content) : content);
         }
-        return appendQuery(url, new String(joined.toByteArray(), StandardCharsets.UTF_8), w);
+        return appendQuery(url, ByteText.decode(joined.toByteArray()), w);
     }
 
     /**
@@ -411,7 +416,7 @@ final class CurlRequestBuilder {
             try {
                 mb.add(f, access);
             } catch (IOException | RuntimeException e) {
-                w.add(Warning.lossy("The form field '" + f.name() + "' could not be built (" + e.getMessage()
+                w.add(Warning.lossy("The form field '" + ByteText.display(f.name()) + "' could not be built (" + e.getMessage()
                         + "); it was skipped"));
             }
         }
@@ -609,7 +614,7 @@ final class CurlRequestBuilder {
             }
         }
         sb.append("\r\n");
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
+        return ByteText.encode(sb.toString());
     }
 
     /** curl adds {@code Expect: 100-continue} for HTTP/1.1 bodies of unknown size or above 1 MiB. */
@@ -680,7 +685,7 @@ final class CurlRequestBuilder {
             if (c < 0) {
                 user = op.user;
                 pass = "";
-                w.add(Warning.lossy("-u " + user + " has no password; curl would prompt for one, "
+                w.add(Warning.lossy("-u " + ByteText.display(user) + " has no password; curl would prompt for one, "
                         + "an empty password is used"));
             } else {
                 user = op.user.substring(0, c);
@@ -692,7 +697,7 @@ final class CurlRequestBuilder {
         } else {
             return null;
         }
-        return "Basic " + Base64.getEncoder().encodeToString((user + ":" + pass).getBytes(StandardCharsets.UTF_8));
+        return "Basic " + Base64.getEncoder().encodeToString(ByteText.encode(user + ":" + pass));
     }
 
     // ---- body ----

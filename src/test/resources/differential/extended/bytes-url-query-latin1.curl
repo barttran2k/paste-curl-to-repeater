@@ -1,0 +1,1 @@
+curl __BASE__/p?q=$'\xe9\xff'

@@ -1,0 +1,1 @@
+curl -G __BASE__/ -d $'a=\xe9'

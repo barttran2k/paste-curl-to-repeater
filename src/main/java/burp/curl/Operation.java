@@ -8,6 +8,9 @@ import java.util.List;
  * {@link CurlCommandParser}, consumed by {@link CurlRequestBuilder}. It holds no file contents: files are only
  * named here and read at build time through {@link FileAccess}.
  *
+ * <p>Strings that curl sends as they are (headers, cookies, user, URL, ...) are wire texts, see {@link ByteText}; file
+ * paths are plain text.
+ *
  * <p>Fields are package-private and mutable on purpose: adding an option means one field here, one case in
  * {@code CurlCommandParser.apply} and one use in {@code CurlRequestBuilder}.
  */

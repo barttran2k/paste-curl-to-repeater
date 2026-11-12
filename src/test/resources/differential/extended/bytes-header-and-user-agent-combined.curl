@@ -1,0 +1,1 @@
+curl __BASE__/ -H $'X-A: \xe9' -A $'\xe9' -e $'\xe9' -b $'c=\xe9' -u $'\xe9:\xe9'

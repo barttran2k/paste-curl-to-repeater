@@ -1,0 +1,1 @@
+curl __BASE__/ -u $'\xff\xfe:\xc3'

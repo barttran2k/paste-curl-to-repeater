@@ -1,0 +1,1 @@
+curl __BASE__/ -H $'X-L: a\xff\xfeb\xc3' -H $'X-M: \xed\xa0\x80'
