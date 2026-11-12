@@ -161,7 +161,7 @@ class CurlParseTest {
                 "--variable a=b", "--expand-data x", "-z 1", "--tr-encoding", "--request-target /", "--proto-default http",
                 "--crlf", "-b jar.txt", "-H @hdrs.txt", "--disallow-username-in-url"}) {
             ParsedCurl p = Curl.parse("curl " + o + " http://h/x");
-            assertTrue(warned(p, Warning.Severity.LOSSY, "not supported yet"), o);
+            assertFalse(warned(p, Warning.Severity.LOSSY, "not supported yet"), o);
             assertEquals(1, p.build(FileAccess.DENY).size(), o);
         }
     }

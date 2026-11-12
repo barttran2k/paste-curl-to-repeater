@@ -41,6 +41,7 @@ public final class MultipartBuilder {
     private final String boundary;
     private final Random innerRandom;
     private boolean formEscape;
+    private String disposition = "form-data";
     private final List<byte[]> parts = new ArrayList<>();
 
     /** Creates a builder with a random curl-style boundary. */
@@ -82,6 +83,18 @@ public final class MultipartBuilder {
         return this;
     }
 
+    /**
+     * Sets the {@code Content-Disposition} type of the top-level parts: {@code form-data} (default) or, when the user
+     * gave a {@code Content-Type} header other than {@code multipart/form-data}, {@code attachment}.
+     *
+     * @param type the disposition type
+     * @return this
+     */
+    public MultipartBuilder disposition(String type) {
+        this.disposition = type;
+        return this;
+    }
+
     /** @return the boundary text (without the leading "--") */
     public String boundary() {
         return boundary;
@@ -107,19 +120,19 @@ public final class MultipartBuilder {
             case LITERAL: {
                 String fn = field.filename();
                 String guess = fn == null ? null : knownType(fn);
-                writeHead(out, "form-data", name, fn, field.type(), guess, field.headers(), files);
+                writeHead(out, disposition, name, fn, field.type(), guess, field.headers(), files);
                 out.write(field.value().getBytes(StandardCharsets.UTF_8));
                 break;
             }
             case FILE_CONTENT: {
                 byte[] data = files.read(field.value());
-                writeHead(out, "form-data", name, null, field.type(), null, field.headers(), files);
+                writeHead(out, disposition, name, null, field.type(), null, field.headers(), files);
                 out.write(data);
                 break;
             }
             case FILE_UPLOAD: {
                 byte[] data = files.read(field.value());
-                writeHead(out, "form-data", name, uploadName(field), field.type(), uploadGuess(field),
+                writeHead(out, disposition, name, uploadName(field), field.type(), uploadGuess(field),
                         field.headers(), files);
                 out.write(data);
                 break;
@@ -132,7 +145,7 @@ public final class MultipartBuilder {
                     throw new IOException(e.getMessage(), e);
                 }
                 String inner = randomBoundary(innerRandom);
-                writeHead(out, "form-data", name, null, "multipart/mixed; boundary=" + inner, null,
+                writeHead(out, disposition, name, null, "multipart/mixed; boundary=" + inner, null,
                         List.of(), files);
                 for (FormField f : list) {
                     byte[] data = files.read(f.value());

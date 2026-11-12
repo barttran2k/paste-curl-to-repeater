@@ -1,5 +1,6 @@
 package burp.curl;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,14 +22,20 @@ public final class CurlCommandParser {
     static final class Parsed {
         final List<Operation> operations = new ArrayList<>();
         final List<Warning> warnings = new ArrayList<>();
+        /** files the variables ({@code --variable name@file}) read */
+        final List<String> variableFiles = new ArrayList<>();
     }
 
     private final CurlOptionTable table = CurlOptionTable.get();
     private final Parsed out = new Parsed();
     private final Operation.StdinSource stdin;
+    private final FileAccess files;
+    private final CurlVariables variables = new CurlVariables();
+    private final List<Warning> lateWarnings = new ArrayList<>();
     private Operation current = new Operation();
 
-    private CurlCommandParser(CommandLine command) {
+    private CurlCommandParser(CommandLine command, FileAccess files) {
+        this.files = files;
         this.stdin = command.stdin() != null || command.stdinFile() != null
                 ? new Operation.StdinSource(command.stdin(), command.stdinFile()) : null;
         current.stdin = stdin;
@@ -41,7 +48,16 @@ public final class CurlCommandParser {
      * @throws CurlParseException on a missing option argument or when no operation has a URL
      */
     static Parsed parse(List<Token> args, CommandLine command) throws CurlParseException {
-        CurlCommandParser p = new CurlCommandParser(command);
+        return parse(args, command, FileAccess.DENY);
+    }
+
+    /**
+     * Like {@link #parse(List, CommandLine)} with access to the files that variables read at parse time.
+     *
+     * @param files source of {@code --variable name@file} contents
+     */
+    static Parsed parse(List<Token> args, CommandLine command, FileAccess files) throws CurlParseException {
+        CurlCommandParser p = new CurlCommandParser(command, files);
         p.walk(args);
         return p.out;
     }
@@ -116,6 +132,7 @@ public final class CurlCommandParser {
         }
         for (Operation op : all) {
             if (!op.urls.isEmpty()) {
+                op.lateWarnings.addAll(lateWarnings);
                 out.operations.add(op);
             }
         }
@@ -141,9 +158,11 @@ public final class CurlCommandParser {
     /** Applies one option to the current operation. {@code arg} is null for options without argument. */
     private void apply(OptionSpec spec, boolean negated, boolean expand, byte[] arg) {
         String opt = "--" + spec.longName();
-        if (expand) {
-            unsupported("--expand-" + spec.longName());
-            return;
+        if (expand && arg != null) {
+            byte[] expanded = variables.expand(arg, lateWarnings, "--expand-" + spec.longName());
+            if (expanded != null) {
+                arg = expanded;
+            }
         }
         Operation op = current;
         switch (spec.longName()) {
@@ -155,23 +174,31 @@ public final class CurlCommandParser {
             case "head" -> op.head = !negated;
             case "get" -> op.get = !negated;
             case "url" -> op.urls.add(text(arg));
-            case "header" -> {
-                if (arg.length > 0 && arg[0] == '@') {
-                    unsupported("-H @file (--header)");
-                } else {
-                    op.headers.add(text(arg));
-                }
-            }
+            case "header" -> op.headers.add(text(arg));
             case "user-agent" -> op.userAgent = text(arg);
             case "referer" -> op.referer = text(arg);
             case "cookie" -> {
                 String c = text(arg);
+                op.cookieEngine = true;
                 if (c.indexOf('=') >= 0) {
                     op.cookies.add(c);
                 } else if (!c.isEmpty()) {
-                    unsupported("--cookie with a cookie file");
+                    op.cookieFiles.add(c);
                 }
             }
+            case "cookie-jar" -> op.cookieEngine = true;
+            case "variable" -> variables.define(arg, this::readStdin, files, lateWarnings);
+            case "form" -> addForm(arg, false);
+            case "form-string" -> addForm(arg, true);
+            case "form-escape" -> op.formEscape = !negated;
+            case "upload-file" -> op.uploads.add(text(arg));
+            case "url-query" -> addUrlQuery(arg);
+            case "time-cond" -> op.timeCond = text(arg);
+            case "tr-encoding" -> op.trEncoding = !negated;
+            case "crlf" -> op.crlf = !negated;
+            case "request-target" -> op.requestTarget = text(arg);
+            case "proto-default" -> op.protoDefault = text(arg);
+            case "disallow-username-in-url" -> op.disallowUsernameInUrl = !negated;
             case "user" -> op.user = text(arg);
             case "basic" -> op.basic = !negated;
             case "oauth2-bearer" -> op.bearer = text(arg);
@@ -200,6 +227,57 @@ public final class CurlCommandParser {
                     default -> { }
                 }
             }
+        }
+    }
+
+    private byte[] readStdin(List<Warning> w) {
+        if (stdin != null && stdin.bytes != null) {
+            return stdin.bytes;
+        }
+        if (stdin != null && stdin.file != null) {
+            try {
+                byte[] b = files.read(stdin.file);
+                if (b != null) {
+                    return b;
+                }
+            } catch (IOException | RuntimeException e) {
+                w.add(Warning.lossy("Could not read " + stdin.file + " (" + e.getMessage()
+                        + "); a placeholder was used"));
+                return ("<<FILE: " + stdin.file + ">>").getBytes(StandardCharsets.UTF_8);
+            }
+        }
+        w.add(Warning.lossy("The command reads stdin (@-) but no stdin content was pasted"));
+        return "<<STDIN>>".getBytes(StandardCharsets.UTF_8);
+    }
+
+    private void addForm(byte[] arg, boolean literal) {
+        try {
+            current.forms.add(literal ? FormField.parseString(text(arg)) : FormField.parse(text(arg)));
+        } catch (CurlParseException e) {
+            out.warnings.add(Warning.lossy("curl rejects this " + (literal ? "--form-string" : "-F")
+                    + " argument (" + e.getMessage() + "); the field was skipped"));
+        }
+    }
+
+    private void addUrlQuery(byte[] arg) {
+        if (arg.length > 0 && arg[0] == '+') {
+            current.urlQueries.add(new Operation.UrlQuery(true, Arrays.copyOfRange(arg, 1, arg.length), null, null));
+            return;
+        }
+        int idx = indexOf(arg, (byte) '=');
+        if (idx < 0) {
+            idx = indexOf(arg, (byte) '@');
+        }
+        if (idx < 0) {
+            current.urlQueries.add(new Operation.UrlQuery(false, arg, null, null));
+            return;
+        }
+        byte[] name = idx > 0 ? Arrays.copyOfRange(arg, 0, idx) : null;
+        byte[] rest = Arrays.copyOfRange(arg, idx + 1, arg.length);
+        if (arg[idx] == '@') {
+            current.urlQueries.add(new Operation.UrlQuery(false, null, text(rest), name));
+        } else {
+            current.urlQueries.add(new Operation.UrlQuery(false, rest, null, name));
         }
     }
 

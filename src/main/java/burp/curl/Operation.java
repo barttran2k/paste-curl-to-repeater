@@ -81,7 +81,103 @@ public final class Operation {
     final List<DataPiece> data = new ArrayList<>();
     boolean json;
 
+    // ---- forms, uploads, queries ----
+    /** one entry per {@code -F} / {@code --form-string}, in order */
+    final List<FormField> forms = new ArrayList<>();
+    boolean formEscape;
+    /** the {@code -T} paths in order ({@code -} is stdin); the i-th one belongs to the i-th URL */
+    final List<String> uploads = new ArrayList<>();
+    /** the {@code --url-query} arguments in order */
+    final List<UrlQuery> urlQueries = new ArrayList<>();
+
+    // ---- misc ----
+    /** {@code -z} argument exactly as given (leading {@code + - =} included), or null */
+    String timeCond;
+    boolean trEncoding;
+    boolean crlf;
+    boolean disallowUsernameInUrl;
+    String requestTarget;
+    String protoDefault;
+    /** {@code -b} arguments that name a cookie file */
+    final List<String> cookieFiles = new ArrayList<>();
+    /** true once {@code -b} or {@code -c} switched curl's cookie engine on */
+    boolean cookieEngine;
+    /** warnings that depend on file contents (variable files); added to every request built from this operation */
+    final List<Warning> lateWarnings = new ArrayList<>();
+
     StdinSource stdin;
+
+    /** One {@code --url-query} argument. */
+    static final class UrlQuery {
+        /** {@code +} prefix: the text is appended without encoding */
+        final boolean raw;
+        /** literal content (after the optional {@code name=}); null when it comes from a file */
+        final byte[] literal;
+        /** file path ({@code -} is stdin) or null */
+        final String file;
+        /** the name sent in front of {@code =} (encoded), or null */
+        final byte[] name;
+
+        UrlQuery(boolean raw, byte[] literal, String file, byte[] name) {
+            this.raw = raw;
+            this.literal = literal;
+            this.file = file;
+            this.name = name;
+        }
+    }
+
+    /** Adds every local path this operation makes the builder read (stdin redirect included) to {@code refs}. */
+    void collectFileRefs(java.util.Set<String> refs) {
+        boolean stdinUsed = false;
+        for (DataPiece p : data) {
+            if (p.file == null) {
+                continue;
+            }
+            if (p.file.equals("-")) {
+                stdinUsed = true;
+            } else {
+                refs.add(p.file);
+            }
+        }
+        for (UrlQuery q : urlQueries) {
+            if (q.file != null) {
+                if (q.file.equals("-")) {
+                    stdinUsed = true;
+                } else {
+                    refs.add(q.file);
+                }
+            }
+        }
+        for (FormField f : forms) {
+            for (String path : f.filePaths()) {
+                if (path.equals("-")) {
+                    stdinUsed = true;
+                } else {
+                    refs.add(path);
+                }
+            }
+        }
+        for (String u : uploads) {
+            if (u.equals("-")) {
+                stdinUsed = true;
+            } else {
+                refs.add(u);
+            }
+        }
+        for (String h : headers) {
+            if (h.startsWith("@")) {
+                if (h.equals("@-")) {
+                    stdinUsed = true;
+                } else {
+                    refs.add(h.substring(1));
+                }
+            }
+        }
+        refs.addAll(cookieFiles);
+        if (stdinUsed && stdin != null && stdin.bytes == null && stdin.file != null) {
+            refs.add(stdin.file);
+        }
+    }
 
     /** @return the URLs given to this operation, in order */
     public List<String> urls() {
