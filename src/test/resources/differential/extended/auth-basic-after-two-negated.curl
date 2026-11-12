@@ -1,0 +1,1 @@
+curl __BASE__/ -u user:pw --ntlm --negotiate --no-ntlm --no-negotiate

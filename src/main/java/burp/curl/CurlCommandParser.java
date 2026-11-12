@@ -205,8 +205,21 @@ public final class CurlCommandParser {
             case "proto-default" -> op.protoDefault = text(arg);
             case "disallow-username-in-url" -> op.disallowUsernameInUrl = !negated;
             case "user" -> op.user = wire(arg);
-            case "basic" -> op.basic = !negated;
-            case "oauth2-bearer" -> op.bearer = wire(arg);
+            case "basic" -> authBit(op, Operation.AUTH_BASIC, negated, opt, false);
+            case "digest" -> authBit(op, Operation.AUTH_DIGEST, negated, opt, true);
+            case "ntlm" -> authBit(op, Operation.AUTH_NTLM, negated, opt, true);
+            case "negotiate" -> authBit(op, Operation.AUTH_NEGOTIATE, negated, opt, true);
+            case "ntlm-wb" -> authBit(op, Operation.AUTH_NTLM_WB, negated, opt, true);
+            case "anyauth" -> {
+                op.authMask = Operation.AUTH_ANY; // --no-anyauth does not exist in the table: curl leaves the mask alone
+                op.authOptions.add(opt);
+                out.warnings.add(Warning.lossy(optionWarning("anyauth", opt, null)));
+            }
+            case "oauth2-bearer" -> {
+                op.bearer = wire(arg);
+                op.authMask |= Operation.AUTH_BEARER;
+                op.authOptions.add(opt);
+            }
             case "range" -> op.range = wire(arg);
             case "compressed" -> op.compressed = !negated;
             case "http1.0" -> op.http10 = true;
@@ -263,8 +276,8 @@ public final class CurlCommandParser {
                 return opt + ": curl would present a client TLS certificate; add it in Burp (Settings \u2192 Network "
                         + "\u2192 TLS \u2192 Client TLS certificates).";
             case "digest", "ntlm", "ntlm-wb", "negotiate", "anyauth":
-                return opt + ": the authentication handshake is not precomputed and no Authorization header is "
-                        + "added; configure platform authentication in Burp or add the header yourself.";
+                return opt + ": the authentication handshake is not precomputed, so this option itself adds no "
+                        + "Authorization header; configure platform authentication in Burp or add the header yourself.";
             case "aws-sigv4":
                 return opt + ": the AWS signature headers are not computed.";
             case "config":
@@ -273,6 +286,19 @@ public final class CurlCommandParser {
                 return opt + ": credentials from .netrc are not read.";
             default:
                 return opt + " changes how curl sends the request and is not reproduced; the request may differ";
+        }
+    }
+
+    /** Sets or clears one bit of the authentication mask, like curl's tool does for {@code --digest} and friends. */
+    private void authBit(Operation op, int bit, boolean negated, String opt, boolean warn) {
+        if (negated) {
+            op.authMask &= ~bit;
+            return;
+        }
+        op.authMask |= bit;
+        op.authOptions.add(opt);
+        if (warn) {
+            out.warnings.add(Warning.lossy(optionWarning(opt.substring(2), opt, null)));
         }
     }
 
