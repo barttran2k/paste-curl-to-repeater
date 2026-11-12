@@ -1,0 +1,9 @@
+curl '__BASE__/api/orders' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://shop.example' \
+  -H 'referer: https://shop.example/cart' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
+  --data-raw '{"items":[{"sku":"A-1","qty":2},{"sku":"B-9","qty":1}],"coupon":null,"note":"Giao giờ hành chính","address":{"city":"Hà Nội"}}' \
+  --compressed

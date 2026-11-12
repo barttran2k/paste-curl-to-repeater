@@ -1,0 +1,3 @@
+curl --json @- __BASE__/in <<'EOF'
+{"from":"stdin","n":[1,2]}
+EOF

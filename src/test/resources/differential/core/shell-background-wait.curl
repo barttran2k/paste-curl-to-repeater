@@ -1,0 +1,2 @@
+curl -s __BASE__/bg &
+wait

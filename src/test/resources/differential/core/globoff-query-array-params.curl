@@ -1,0 +1,1 @@
+curl -g '__BASE__/s?filter[status]=open&filter[owner]=me&sort[]=-created'

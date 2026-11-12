@@ -1,0 +1,2 @@
+curl -s __BASE__/first
+curl -s -X POST -d 'n=2' __BASE__/second

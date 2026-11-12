@@ -1,0 +1,1 @@
+curl --compressed -H 'Accept-Encoding: identity' __BASE__/h

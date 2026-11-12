@@ -1,0 +1,3 @@
+curl -s __BASE__/one
+curl -s -X POST --json '{"n":2}' __BASE__/two
+curl -s -u alice:pw -G --url-query 'q=3' __BASE__/three

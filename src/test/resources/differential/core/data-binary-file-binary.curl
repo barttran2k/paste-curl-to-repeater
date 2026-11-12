@@ -1,0 +1,1 @@
+curl --data-binary @body.bin -H 'Content-Type: application/octet-stream' __BASE__/d

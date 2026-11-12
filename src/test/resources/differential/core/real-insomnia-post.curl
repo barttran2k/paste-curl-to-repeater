@@ -1,0 +1,9 @@
+curl --request POST \
+  --url __BASE__/api/widgets \
+  --header 'authorization: Bearer fake.jwt.token' \
+  --header 'content-type: application/json' \
+  --header 'user-agent: insomnia/9.0.0' \
+  --data '{
+	"name": "widget",
+	"size": 12
+}'

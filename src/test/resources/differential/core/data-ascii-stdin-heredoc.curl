@@ -1,0 +1,4 @@
+curl --data-ascii @- __BASE__/in <<'EOF'
+a=1
+b=2
+EOF

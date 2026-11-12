@@ -1,0 +1,1 @@
+curl -H 'Host: virtual.example' __BASE__/h

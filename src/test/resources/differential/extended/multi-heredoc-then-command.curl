@@ -1,0 +1,6 @@
+curl -s -T - __BASE__/up/ <<'EOF'
+first body
+EOF
+curl -s -d @- __BASE__/second <<'EOF'
+second=body
+EOF

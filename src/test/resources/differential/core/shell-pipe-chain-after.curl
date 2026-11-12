@@ -1,0 +1,1 @@
+curl -s __BASE__/pipe | cat | wc -c

@@ -1,0 +1,1 @@
+curl -G --data-urlencode 'q=hello world&more' --data-urlencode 'lang=vi' __BASE__/s

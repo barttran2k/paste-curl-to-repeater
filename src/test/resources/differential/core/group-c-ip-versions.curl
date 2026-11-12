@@ -1,0 +1,1 @@
+curl -4 -s __BASE__/gc --next -6 -s __BASE__/gc

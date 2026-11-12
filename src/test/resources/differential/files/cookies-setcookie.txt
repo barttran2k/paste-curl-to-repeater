@@ -1,0 +1,2 @@
+Set-Cookie: hdrsid=h123; path=/
+Set-Cookie: hdrpref=light; path=/

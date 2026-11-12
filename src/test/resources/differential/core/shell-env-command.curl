@@ -1,0 +1,1 @@
+env FOO=bar curl -s __BASE__/env

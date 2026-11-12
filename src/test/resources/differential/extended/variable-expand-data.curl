@@ -1,0 +1,1 @@
+curl --variable name=Alice --expand-data 'hello {{name}}' __BASE__/x

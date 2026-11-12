@@ -1,0 +1,3 @@
+curl --data-urlencode @- __BASE__/in <<'EOF'
+hello world & more
+EOF

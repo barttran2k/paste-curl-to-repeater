@@ -1,0 +1,1 @@
+curl -F 'a=@doc.xml' -F 'b=@payload.json' -F 'c=@t.png' -F 'd=@form.txt' -F 'e=@body.bin' __BASE__/f

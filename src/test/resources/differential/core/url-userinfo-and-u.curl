@@ -1,0 +1,1 @@
+curl -u bob:other 'http://alice:s3cret@__HOSTPORT__/u'

@@ -1,0 +1,1 @@
+curl --data-urlencode 'plain text' --data-urlencode '=eq text' --data-urlencode 'n=named text' --data-urlencode @a.txt --data-urlencode 'f@b.txt' __BASE__/d

@@ -1,0 +1,1 @@
+curl --form 'title=Report 2024' --form 'draft=true' __BASE__/f

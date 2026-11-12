@@ -1,0 +1,1 @@
+curl -s -c jar.txt -L -d 'username=admin&password=hunter2&submit=Login' __BASE__/login.php

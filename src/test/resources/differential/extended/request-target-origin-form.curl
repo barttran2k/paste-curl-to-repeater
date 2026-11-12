@@ -1,0 +1,1 @@
+curl --request-target '/custom?x=1' __BASE__/ignored

@@ -2,6 +2,7 @@ package burp.curl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import burp.curl.testsupport.Captured;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -184,7 +185,7 @@ class MultipartDifferentialTest {
             args.add(a.replace("{d}", d));
         }
         args.add("http://form.example/");
-        CurlUrlDifferentialTest.Captured got = CurlUrlDifferentialTest.capture(args.toArray(new String[0]));
+        Captured got = Captured.capture(args.toArray(new String[0]));
         FileAccess fa = path -> Files.readAllBytes(Path.of(path));
 
         MultipartBuilder b = new MultipartBuilder();

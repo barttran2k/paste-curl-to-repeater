@@ -1,0 +1,1 @@
+curl --head __BASE__/status?full=1

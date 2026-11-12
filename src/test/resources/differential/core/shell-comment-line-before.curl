@@ -1,0 +1,2 @@
+# fetch the thing
+curl -s __BASE__/comment

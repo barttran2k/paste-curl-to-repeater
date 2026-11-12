@@ -1,0 +1,1 @@
+curl --variable v=x --expand-data-urlencode 'a={{v}} y' __BASE__/x

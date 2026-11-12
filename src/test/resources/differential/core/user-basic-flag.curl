@@ -1,0 +1,1 @@
+curl --basic -u alice:pw __BASE__/u

@@ -1,0 +1,1 @@
+curl --data-binary $'line1\r\nline2\r\n\r\nline4' -H 'Content-Type: text/plain' __BASE__/d

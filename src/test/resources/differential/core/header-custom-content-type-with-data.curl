@@ -1,0 +1,1 @@
+curl -H 'Content-Type: text/plain; charset=utf-8' -d 'plain text' __BASE__/h

@@ -1,0 +1,4 @@
+curl -X POST __BASE__/in -d @- <<'EOF'
+{"stdin":true,
+ "lines":["a","b"]}
+EOF

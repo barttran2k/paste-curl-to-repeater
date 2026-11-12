@@ -1,0 +1,1 @@
+curl -F 'file=@a.txt;type=text/plain' __BASE__/f

@@ -1,0 +1,1 @@
+curl --json @lines.txt __BASE__/j

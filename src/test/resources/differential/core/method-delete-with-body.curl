@@ -1,0 +1,1 @@
+curl -X DELETE -d '{"id":42}' __BASE__/api/items

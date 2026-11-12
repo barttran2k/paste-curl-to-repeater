@@ -1,0 +1,1 @@
+curl -XPOST __BASE__/cl

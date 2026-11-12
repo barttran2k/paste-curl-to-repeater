@@ -1,0 +1,3 @@
+# Netscape HTTP Cookie File
+127.0.0.1	FALSE	/	FALSE	0	sid	abc123
+127.0.0.1	FALSE	/	FALSE	0	pref	dark

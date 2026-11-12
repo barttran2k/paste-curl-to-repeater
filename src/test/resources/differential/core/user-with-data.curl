@@ -1,0 +1,1 @@
+curl -u api_key:x -d 'a=1' __BASE__/u

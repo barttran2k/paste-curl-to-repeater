@@ -1,0 +1,1 @@
+curl -u first:1 -u second:2 __BASE__/u

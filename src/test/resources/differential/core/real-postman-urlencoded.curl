@@ -1,0 +1,6 @@
+curl --location '__BASE__/oauth/token' \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--data-urlencode 'grant_type=password' \
+--data-urlencode 'username=alice@example.test' \
+--data-urlencode 'password=p@ss w0rd!' \
+--data-urlencode 'scope=read write'

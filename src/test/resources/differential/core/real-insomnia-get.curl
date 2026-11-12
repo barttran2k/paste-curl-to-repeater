@@ -1,0 +1,3 @@
+curl --request GET \
+  --url '__BASE__/api/widgets?color=blue&size=large' \
+  --header 'accept: application/json'

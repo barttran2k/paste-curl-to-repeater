@@ -1,0 +1,1 @@
+curl -F 'a=b' __BASE__/f1 --next -F 'c=@a.txt' __BASE__/f2

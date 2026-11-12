@@ -1,0 +1,1 @@
+curl --variable 'seg=a b/c' --expand-url '__BASE__/p/{{seg:url}}?k={{seg:url}}'

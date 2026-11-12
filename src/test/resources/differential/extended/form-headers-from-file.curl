@@ -1,0 +1,1 @@
+curl -F 'f=@a.txt;headers=@hdr.txt' __BASE__/f

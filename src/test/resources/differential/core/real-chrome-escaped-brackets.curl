@@ -1,0 +1,3 @@
+curl '__BASE__/api/items/\[1\]/\{id\}?filter\[name\]=x' \
+  -H 'accept: application/json' \
+  -H 'x-requested-with: XMLHttpRequest'

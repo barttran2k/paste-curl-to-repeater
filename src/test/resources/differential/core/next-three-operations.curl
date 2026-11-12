@@ -1,0 +1,1 @@
+curl -s -A one __BASE__/a -: -s -A two __BASE__/b --next -s -I __BASE__/c

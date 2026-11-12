@@ -1,0 +1,1 @@
+curl -A'Glued/1.0' -e'https://r.example/' -b'a=1' __BASE__/cl

@@ -1,0 +1,1 @@
+curl -H'X-Adj: yes' -H"X-Adj2: yes2" __BASE__/q

@@ -1,0 +1,1 @@
+curl __BASE__/a --next -X POST -d 'k=v' __BASE__/b

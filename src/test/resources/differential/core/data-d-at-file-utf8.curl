@@ -1,0 +1,1 @@
+curl -d @utf8.txt __BASE__/d

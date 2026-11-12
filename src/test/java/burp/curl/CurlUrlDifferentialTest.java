@@ -5,18 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import burp.curl.testsupport.Captured;
+import burp.curl.testsupport.CurlRunner;
 import java.net.IDN;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DynamicTest;
@@ -25,111 +20,12 @@ import org.junit.jupiter.api.TestFactory;
 /** Runs the real curl against a local capture server and compares what it sends with {@link CurlUrl}. */
 class CurlUrlDifferentialTest {
 
-    /** What the capture server saw. */
-    static final class Captured {
-        int exit;
-        String stderr = "";
-        /** raw request bytes, null when curl never connected */
-        byte[] raw;
-
-        String wire() {
-            return new String(raw, StandardCharsets.ISO_8859_1);
-        }
-
-        String header(String name) {
-            String w = wire();
-            int end = w.indexOf("\r\n\r\n");
-            String head = end >= 0 ? w.substring(0, end) : w;
-            for (String line : head.split("\r\n")) {
-                if (line.regionMatches(true, 0, name + ":", 0, name.length() + 1)) {
-                    return line.substring(name.length() + 1).trim();
-                }
-            }
-            return null;
-        }
-
-        String requestLine() {
-            String w = wire();
-            return w.substring(0, w.indexOf("\r\n"));
-        }
-
-        byte[] body() {
-            String w = wire();
-            int end = w.indexOf("\r\n\r\n");
-            byte[] all = raw;
-            return java.util.Arrays.copyOfRange(all, end + 4, all.length);
-        }
-    }
-
     static boolean curlAvailable() {
-        try {
-            Process p = new ProcessBuilder("curl", "--version").redirectErrorStream(true).start();
-            p.getInputStream().readAllBytes();
-            return p.waitFor(10, TimeUnit.SECONDS) && p.exitValue() == 0;
-        } catch (IOException | InterruptedException e) {
-            return false;
-        }
+        return CurlRunner.curlVersion() != null;
     }
 
-    /** Runs curl with {@code --connect-to} pointing at a 127.0.0.1 capture server. */
     static Captured capture(String... args) throws Exception {
-        Captured result = new Captured();
-        try (ServerSocket ss = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
-            Thread t = new Thread(() -> serve(ss, result));
-            t.setDaemon(true);
-            t.start();
-            List<String> cmd = new ArrayList<>(List.of("curl", "-sS", "-g", "--max-time", "8", "--connect-to",
-                    "::127.0.0.1:" + ss.getLocalPort()));
-            cmd.addAll(List.of(args));
-            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            byte[] out = p.getInputStream().readAllBytes();
-            Assumptions.assumeTrue(p.waitFor(20, TimeUnit.SECONDS), "curl timed out");
-            result.exit = p.exitValue();
-            result.stderr = new String(out, StandardCharsets.UTF_8);
-            ss.close();
-            t.join(5000);
-        }
-        return result;
-    }
-
-    private static void serve(ServerSocket ss, Captured result) {
-        try (Socket s = ss.accept()) {
-            s.setSoTimeout(5000);
-            InputStream in = s.getInputStream();
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            int headEnd = -1;
-            int need = -1;
-            byte[] chunk = new byte[8192];
-            while (true) {
-                if (headEnd < 0) {
-                    byte[] cur = buf.toByteArray();
-                    String w = new String(cur, StandardCharsets.ISO_8859_1);
-                    int i = w.indexOf("\r\n\r\n");
-                    if (i >= 0) {
-                        headEnd = i + 4;
-                        need = 0;
-                        for (String line : w.substring(0, i).split("\r\n")) {
-                            if (line.regionMatches(true, 0, "Content-Length:", 0, 15)) {
-                                need = Integer.parseInt(line.substring(15).trim());
-                            }
-                        }
-                    }
-                }
-                if (headEnd >= 0 && buf.size() >= headEnd + need) {
-                    break;
-                }
-                int n = in.read(chunk);
-                if (n < 0) {
-                    break;
-                }
-                buf.write(chunk, 0, n);
-            }
-            result.raw = buf.toByteArray();
-            s.getOutputStream().write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
-            s.getOutputStream().flush();
-        } catch (IOException e) {
-            // closed without a connection: curl rejected the URL
-        }
+        return Captured.capture(args);
     }
 
     private static String wire(String s) {

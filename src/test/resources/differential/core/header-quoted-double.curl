@@ -1,0 +1,1 @@
+curl -H "X-Dq: double quoted" -H "X-Esc: say \"hi\"" __BASE__/h

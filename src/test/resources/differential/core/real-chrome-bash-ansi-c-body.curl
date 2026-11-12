@@ -1,0 +1,3 @@
+curl '__BASE__/api/echo' \
+  -H 'content-type: text/plain;charset=UTF-8' \
+  --data-raw $'first line\nsecond "quoted" line\nit\'s ünïcode ✓'

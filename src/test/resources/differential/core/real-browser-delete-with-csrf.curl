@@ -1,0 +1,1 @@
+curl '__BASE__/api/posts/123' -X 'DELETE' -H 'X-CSRF-Token: Zm9vYmFyYmF6' -H 'X-Requested-With: XMLHttpRequest' -H 'Cookie: _session=abcdef; csrf=Zm9vYmFyYmF6'

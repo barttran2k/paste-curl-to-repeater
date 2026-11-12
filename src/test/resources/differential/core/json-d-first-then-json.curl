@@ -1,0 +1,1 @@
+curl -d 'head' --json '{"a":1}' __BASE__/j

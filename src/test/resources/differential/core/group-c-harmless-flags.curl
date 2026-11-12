@@ -1,0 +1,1 @@
+curl -s -S -L -k -v -i -o /dev/null -w '%{http_code}' --connect-timeout 5 -m 10 --retry 2 --max-redirs 3 -4 --tlsv1.2 --proto '=http,https' --noproxy '*' -D /dev/null -H 'X-C: 1' __BASE__/gc

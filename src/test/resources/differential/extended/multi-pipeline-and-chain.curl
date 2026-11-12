@@ -1,0 +1,1 @@
+curl -s -F 'a=1' __BASE__/one | cat && curl -s -T a.txt __BASE__/two/ ; curl -s -I __BASE__/three

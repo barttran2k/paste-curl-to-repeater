@@ -1,0 +1,1 @@
+curl -F 'file=@payload.json;type=application/json;filename=data.json' __BASE__/f

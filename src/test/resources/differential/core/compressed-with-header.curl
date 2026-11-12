@@ -1,0 +1,1 @@
+curl --compressed -H 'X-A: 1' __BASE__/z

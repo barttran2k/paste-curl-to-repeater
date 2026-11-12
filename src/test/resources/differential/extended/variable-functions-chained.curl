@@ -1,0 +1,1 @@
+curl --variable 'v= a"b ' --expand-data '{{v:trim:json}} {{v:trim:url}} {{v:trim:b64}}' __BASE__/x

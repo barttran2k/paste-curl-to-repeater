@@ -1,0 +1,1 @@
+curl __BASE__/search?x=1 --get -d y=2

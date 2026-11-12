@@ -1,0 +1,1 @@
+curl -b '_ga=GA1.1.123456789.1700000000; _gid=GA1.1.987654321.1700000000; sessionid=7f3a9c2e1b4d; csrftoken=Zm9vYmFy; lang=vi-VN' __BASE__/c

@@ -1,0 +1,1 @@
+curl '__BASE__/café/ñ?q=é'

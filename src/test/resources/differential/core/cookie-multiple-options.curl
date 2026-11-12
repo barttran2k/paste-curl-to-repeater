@@ -1,0 +1,1 @@
+curl -b 'a=1' -b 'b=2' --cookie 'c=3' __BASE__/c

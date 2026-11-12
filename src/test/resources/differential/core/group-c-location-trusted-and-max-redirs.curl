@@ -1,0 +1,1 @@
+curl -sL --location-trusted --max-redirs 5 --post301 --post302 -d a=1 __BASE__/gc

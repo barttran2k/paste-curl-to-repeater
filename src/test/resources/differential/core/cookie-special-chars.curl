@@ -1,0 +1,1 @@
+curl -b 'tok=eyJhbGciOiJIUzI1NiJ9.e30.abc-_; q="quoted value"; pct=a%20b' __BASE__/c

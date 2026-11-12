@@ -1,0 +1,1 @@
+curl -H 'Origin: https://app.example' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-site' __BASE__/h

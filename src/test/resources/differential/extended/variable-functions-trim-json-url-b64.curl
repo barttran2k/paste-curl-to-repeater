@@ -1,0 +1,1 @@
+curl --variable 'v= padded ' --expand-data '[{{v:trim}}][{{v:url}}][{{v:json}}][{{v:b64}}]' __BASE__/x

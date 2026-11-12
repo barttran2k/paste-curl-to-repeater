@@ -1,0 +1,1 @@
+curl -e 'https://ref.example/page#frag' __BASE__/r

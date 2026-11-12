@@ -1,0 +1,4 @@
+curl --data-binary @- __BASE__/in <<'EOF'
+keep
+newlines
+EOF

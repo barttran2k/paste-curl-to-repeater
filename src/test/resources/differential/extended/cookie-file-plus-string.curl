@@ -1,0 +1,1 @@
+curl -b cookies.txt -b 'x=1' __BASE__/c
