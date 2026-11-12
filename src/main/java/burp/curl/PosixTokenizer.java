@@ -412,7 +412,7 @@ public final class PosixTokenizer implements Tokenizer {
                     case '‘': case '’': {
                         curlyNote();
                         int e = i + 1;
-                        while (e < end && s.charAt(e) != '‘' && s.charAt(e) != '’') e++;
+                        while (e < end && !(isCurlySingle(s.charAt(e)) && closesCurly(e))) e++;
                         if (e >= end) throw err("Unterminated curly single quote", i);
                         raw(b, s.substring(i + 1, e));
                         i = e + 1;
@@ -455,6 +455,16 @@ public final class PosixTokenizer implements Tokenizer {
             }
             if (!any) return null;
             return Token.of(b.toByteArray(), q);
+        }
+
+        static boolean isCurlySingle(char c) {
+            return c == '\u2018' || c == '\u2019';
+        }
+
+        /** A curly quote at p closes its segment only before whitespace, end of input or ; | & < > ). */
+        boolean closesCurly(int p) {
+            char n = peek(p + 1);
+            return n == 0 || isSpace(n) || ";|&<>)".indexOf(n) >= 0;
         }
 
         void curlyNote() {
@@ -607,7 +617,7 @@ public final class PosixTokenizer implements Tokenizer {
             while (true) {
                 if (i >= end) throw err(curly ? "Unterminated curly double quote" : "Unterminated double quote", open);
                 char c = s.charAt(i);
-                if (curly ? (c == '“' || c == '”') : c == '"') {
+                if (curly ? ((c == '“' || c == '”') && closesCurly(i)) : c == '"') {
                     i++;
                     return;
                 }
