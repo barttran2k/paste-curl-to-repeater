@@ -121,7 +121,7 @@ class FileGuardTest {
 
     @Test
     void everyReadOfTheWholeCorpusIsListed() throws Exception {
-        Path files = Corpus.filesDir();
+        Path files = burp.curl.testsupport.DifferentialHarness.freshWorkDir();
         int cases = 0;
         for (String sub : new String[] {"core", "extended"}) {
             for (Corpus.Case c : Corpus.load(sub)) {

@@ -32,3 +32,12 @@ Leading lines starting with `#!` are harness directives and are not part of the 
 - Never write outside the working directory. `files/` holds the fixtures (text, binary, UTF-8, cookie files, ...).
 - `--opt=value`, abbreviated long options, `--http2` over plain http and `-z <file>` are not in the corpus: curl 8.7.1
   rejects the first two, `--http2` makes curl send an h2c Upgrade, and `-z <file>` needs the file's mtime.
+
+## Fixtures with names git cannot carry everywhere
+
+A tracked file name must not contain `\ : * ? " < > |`, end in a space or dot, or be a Windows device name
+(`TrackedFileNamesTest` enforces it). Fixtures that need such names (a backslash or colon in a file name) are listed
+in `special-files.tsv` instead: one `name<TAB>content` per line, `#` starts a comment, and both fields use `%XX`
+escapes (`%25` for `%`, `%5C` backslash, `%3A` colon, `%09` tab, `%0A` newline). The harness writes them next to the
+copy of `files/` in each fresh working directory, for the real curl and for our `FileAccess`. On a file system that
+cannot create such a name the cases that mention it are skipped with an assumption that names the reason.

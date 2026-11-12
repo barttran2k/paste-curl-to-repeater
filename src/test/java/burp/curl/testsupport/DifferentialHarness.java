@@ -42,7 +42,23 @@ public final class DifferentialHarness {
                 }
             }
         }
+        Corpus.materialiseSpecialFiles(wd);
         return wd;
+    }
+
+    /** Skips (with the reason) a case that names a fixture the file system cannot create. */
+    private static void assumeFixturesAvailable(Corpus.Case c) throws IOException {
+        Path probe = Files.createTempDirectory("curl-diff-probe");
+        try {
+            String reason = Corpus.materialiseSpecialFiles(probe);
+            if (reason != null) {
+                for (Corpus.SpecialFile f : Corpus.specialFiles()) {
+                    Assumptions.assumeTrue(!c.body().contains(f.name()), reason);
+                }
+            }
+        } finally {
+            CurlRunner.deleteRecursively(probe);
+        }
     }
 
     /**
@@ -71,6 +87,7 @@ public final class DifferentialHarness {
     public static void check(Corpus.Case c) throws Exception {
         String skip = c.skipReason();
         Assumptions.assumeTrue(skip == null, skip);
+        assumeFixturesAvailable(c);
         CurlRun run = runCurl(c);
         if (run.result().timedOut() || run.result().exit() != 0 || run.requests().isEmpty()) {
             throw new AssertionFailedError("corpus case " + c.name() + " is not valid curl on this machine: exit "
