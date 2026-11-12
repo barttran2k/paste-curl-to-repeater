@@ -577,13 +577,17 @@ final class CurlRequestBuilder {
                 continue;
             }
             int colon = h.indexOf(':');
+            if (colon == 0) {
+                // curl 8.7.1 never sends a line that starts with ':' (HTTP/2 pseudo headers, ': x'; measured)
+                continue;
+            }
             if (colon >= 0) {
                 if (!blank(h.substring(colon + 1))) {
                     sb.append(h).append("\r\n");
                 }
             } else {
                 int semi = h.indexOf(';');
-                if (semi > 0 && semi == h.length() - 1) {
+                if (semi >= 0 && semi == h.length() - 1) {
                     sb.append(h, 0, semi).append(":\r\n");
                 }
             }
