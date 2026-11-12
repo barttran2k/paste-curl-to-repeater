@@ -1,0 +1,288 @@
+#long	short	kind	negatable	handling
+abstract-unix-socket		FILE	0	B
+alpn		BOOL	1	C
+alt-svc		STRING	0	C
+anyauth		NONE	0	B
+append	a	BOOL	1	C
+aws-sigv4		STRING	0	B
+basic		BOOL	1	A
+buffer	N	BOOL	1	C
+ca-native		BOOL	1	C
+cacert		FILE	0	C
+capath		FILE	0	C
+cert	E	FILE	0	B
+cert-status		BOOL	1	C
+cert-type		STRING	0	C
+ciphers		STRING	0	C
+clobber		BOOL	1	C
+compressed		BOOL	1	A
+compressed-ssh		BOOL	1	D
+config	K	FILE	0	B
+connect-timeout		NUM	0	C
+connect-to		STRING	0	B
+continue-at	C	STRING	0	B
+cookie	b	STRING	0	A
+cookie-jar	c	STRING	0	C
+create-dirs		BOOL	1	C
+create-file-mode		STRING	0	C
+crlf		BOOL	1	A
+crlfile		FILE	0	C
+curves		STRING	0	C
+data	d	STRING	0	A
+data-ascii		STRING	0	A
+data-binary		STRING	0	A
+data-raw		STRING	0	A
+data-urlencode		STRING	0	A
+delegation		STRING	0	B
+digest		BOOL	1	B
+disable	q	BOOL	1	C
+disable-eprt		BOOL	1	D
+disable-epsv		BOOL	1	D
+disallow-username-in-url		BOOL	1	A
+dns-interface		STRING	0	C
+dns-ipv4-addr		STRING	0	C
+dns-ipv6-addr		STRING	0	C
+dns-servers		STRING	0	C
+doh-cert-status		BOOL	1	C
+doh-insecure		BOOL	1	C
+doh-url		STRING	0	C
+dump-ca-embed		NONE	0	C
+dump-header	D	FILE	0	C
+ech		STRING	0	C
+egd-file		STRING	0	C
+engine		STRING	0	C
+eprt		BOOL	1	D
+epsv		BOOL	1	D
+etag-compare		FILE	0	B
+etag-save		FILE	0	C
+expect100-timeout		NUM	0	C
+fail	f	BOOL	1	C
+fail-early		BOOL	1	C
+fail-with-body		BOOL	1	C
+false-start		BOOL	1	C
+follow		BOOL	1	C
+form	F	STRING	0	A
+form-escape		BOOL	1	A
+form-string		STRING	0	A
+ftp-account		STRING	0	D
+ftp-alternative-to-user		STRING	0	D
+ftp-create-dirs		BOOL	1	D
+ftp-method		STRING	0	D
+ftp-pasv		NONE	0	D
+ftp-port	P	STRING	0	D
+ftp-pret		BOOL	1	D
+ftp-skip-pasv-ip		BOOL	1	D
+ftp-ssl		BOOL	1	D
+ftp-ssl-ccc		BOOL	1	D
+ftp-ssl-ccc-mode		STRING	0	D
+ftp-ssl-control		BOOL	1	D
+ftp-ssl-reqd		BOOL	1	D
+get	G	BOOL	1	A
+globoff	g	BOOL	1	A
+happy-eyeballs-timeout-ms		NUM	0	C
+haproxy-clientip		STRING	0	B
+haproxy-protocol		BOOL	1	B
+head	I	BOOL	1	A
+header	H	STRING	0	A
+help	h	STRING	0	C
+hostpubmd5		STRING	0	D
+hostpubsha256		STRING	0	D
+hsts		STRING	0	C
+http0.9		BOOL	1	C
+http1.0	0	NONE	0	A
+http1.1		NONE	0	A
+http2		NONE	0	A
+http2-prior-knowledge		NONE	0	A
+http3		NONE	0	A
+http3-only		NONE	0	A
+httpsig-algo		STRING	0	B
+httpsig-headers		STRING	0	B
+httpsig-key		FILE	0	B
+httpsig-keyid		STRING	0	B
+ignore-content-length		BOOL	1	C
+include		BOOL	1	C
+insecure	k	BOOL	1	C
+interface		STRING	0	C
+ip-tos		STRING	0	C
+ipfs-gateway		STRING	0	C
+ipv4	4	NONE	0	C
+ipv6	6	NONE	0	C
+json		STRING	0	A
+junk-session-cookies	j	BOOL	1	C
+keepalive		BOOL	1	C
+keepalive-cnt		NUM	0	C
+keepalive-time		NUM	0	C
+key		FILE	0	B
+key-type		STRING	0	C
+knownhosts		FILE	0	D
+krb		STRING	0	D
+krb4		STRING	0	D
+libcurl		STRING	0	C
+limit-rate		STRING	0	C
+list-only	l	BOOL	1	D
+local-port		STRING	0	C
+location	L	BOOL	1	C
+location-trusted		BOOL	1	C
+login-options		STRING	0	B
+mail-auth		STRING	0	D
+mail-from		STRING	0	D
+mail-rcpt		STRING	0	D
+mail-rcpt-allowfails		BOOL	1	D
+manual	M	BOOL	1	C
+max-filesize		STRING	0	C
+max-redirs		STRING	0	C
+max-time	m	NUM	0	C
+metalink		BOOL	1	C
+mptcp		BOOL	1	C
+negotiate		BOOL	1	B
+netrc	n	BOOL	1	B
+netrc-file		FILE	0	B
+netrc-optional		BOOL	1	B
+next	:	NONE	0	A
+noproxy		STRING	0	C
+npn		BOOL	1	C
+ntlm		BOOL	1	B
+ntlm-wb		BOOL	1	B
+oauth2-bearer		STRING	0	A
+out-null		BOOL	1	C
+output	o	FILE	0	C
+output-dir		STRING	0	C
+parallel	Z	BOOL	1	C
+parallel-immediate		BOOL	1	C
+parallel-max		NUM	0	C
+parallel-max-host		NUM	0	C
+pass		STRING	0	C
+path-as-is		BOOL	1	A
+pinnedpubkey		STRING	0	C
+post301		BOOL	1	C
+post302		BOOL	1	C
+post303		BOOL	1	C
+preproxy		STRING	0	C
+progress-bar	#	BOOL	1	C
+progress-meter		BOOL	1	C
+proto		STRING	0	C
+proto-default		STRING	0	A
+proto-redir		STRING	0	C
+proxy	x	STRING	0	B
+proxy-anyauth		BOOL	1	C
+proxy-basic		BOOL	1	C
+proxy-ca-native		BOOL	1	C
+proxy-cacert		FILE	0	C
+proxy-capath		FILE	0	C
+proxy-cert		FILE	0	C
+proxy-cert-type		STRING	0	C
+proxy-ciphers		STRING	0	C
+proxy-crlfile		FILE	0	C
+proxy-digest		BOOL	1	C
+proxy-header		STRING	0	C
+proxy-http2		BOOL	1	C
+proxy-http3		BOOL	1	C
+proxy-insecure		BOOL	1	C
+proxy-key		FILE	0	C
+proxy-key-type		STRING	0	C
+proxy-negotiate		BOOL	1	C
+proxy-ntlm		BOOL	1	C
+proxy-pass		STRING	0	C
+proxy-pinnedpubkey		STRING	0	C
+proxy-service-name		STRING	0	C
+proxy-ssl-allow-beast		BOOL	1	C
+proxy-ssl-auto-client-cert		BOOL	1	C
+proxy-tls13-ciphers		STRING	0	C
+proxy-tlsauthtype		STRING	0	C
+proxy-tlspassword		STRING	0	C
+proxy-tlsuser		STRING	0	C
+proxy-tlsv1		NONE	0	C
+proxy-user	U	STRING	0	C
+proxy1.0		STRING	0	C
+proxytunnel	p	BOOL	1	C
+pubkey		STRING	0	D
+quote	Q	STRING	0	D
+random-file		FILE	0	C
+range	r	STRING	0	A
+rate		STRING	0	C
+raw		BOOL	1	C
+referer	e	STRING	0	A
+remote-header-name	J	BOOL	1	C
+remote-name	O	BOOL	1	C
+remote-name-all		BOOL	1	C
+remote-time	R	BOOL	1	C
+remove-on-error		BOOL	1	C
+request	X	STRING	0	A
+request-target		STRING	0	A
+resolve		STRING	0	B
+retry		NUM	0	C
+retry-all-errors		BOOL	1	C
+retry-connrefused		BOOL	1	C
+retry-delay		NUM	0	C
+retry-max-time		NUM	0	C
+sasl-authzid		STRING	0	D
+sasl-ir		BOOL	1	D
+service-name		STRING	0	B
+sessionid		BOOL	1	C
+show-error	S	BOOL	1	C
+show-headers	i	BOOL	1	C
+sigalgs		STRING	0	C
+silent	s	BOOL	1	C
+skip-existing		BOOL	1	C
+socks4		STRING	0	C
+socks4a		STRING	0	C
+socks5		STRING	0	C
+socks5-basic		BOOL	1	C
+socks5-gssapi		BOOL	1	C
+socks5-gssapi-nec		BOOL	1	C
+socks5-gssapi-service		STRING	0	C
+socks5-hostname		STRING	0	C
+speed-limit	Y	NUM	0	C
+speed-time	y	NUM	0	C
+ssl		BOOL	1	C
+ssl-allow-beast		BOOL	1	C
+ssl-auto-client-cert		BOOL	1	C
+ssl-no-revoke		BOOL	1	C
+ssl-reqd		BOOL	1	C
+ssl-revoke-best-effort		BOOL	1	C
+ssl-sessions		FILE	0	C
+sslv2	2	NONE	0	C
+sslv3	3	NONE	0	C
+stderr		FILE	0	C
+styled-output		BOOL	1	C
+suppress-connect-headers		BOOL	1	C
+tcp-fastopen		BOOL	1	C
+tcp-nodelay		BOOL	1	C
+telnet-option	t	STRING	0	D
+test-duphandle		BOOL	1	C
+test-event		BOOL	1	C
+tftp-blksize		NUM	0	D
+tftp-no-options		BOOL	1	D
+time-cond	z	STRING	0	A
+tls-earlydata		BOOL	1	C
+tls-max		STRING	0	C
+tls13-ciphers		STRING	0	C
+tlsauthtype		STRING	0	C
+tlspassword		STRING	0	C
+tlsuser		STRING	0	C
+tlsv1	1	NONE	0	C
+tlsv1.0		NONE	0	C
+tlsv1.1		NONE	0	C
+tlsv1.2		NONE	0	C
+tlsv1.3		NONE	0	C
+tr-encoding		BOOL	1	A
+trace		FILE	0	C
+trace-ascii		FILE	0	C
+trace-config		STRING	0	C
+trace-ids		BOOL	1	C
+trace-time		BOOL	1	C
+unix-socket		FILE	0	B
+upload-file	T	FILE	0	A
+upload-flags		STRING	0	B
+url		STRING	0	A
+url-query		STRING	0	A
+use-ascii	B	BOOL	1	C
+user	u	STRING	0	A
+user-agent	A	STRING	0	A
+variable		STRING	0	A
+verbose	v	BOOL	1	C
+version	V	BOOL	1	C
+vlan-priority		NUM	0	C
+wdebug		BOOL	1	C
+write-out	w	STRING	0	C
+xattr		BOOL	1	C
