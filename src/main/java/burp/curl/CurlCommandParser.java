@@ -127,7 +127,7 @@ public final class CurlCommandParser {
                     }
                 }
             } else {
-                current.urls.add(w);
+                current.urls.add(wire(b));
             }
         }
         for (Operation op : all) {
@@ -147,8 +147,14 @@ public final class CurlCommandParser {
         all.add(current);
     }
 
+    /** An argument that is text for us (file path, date, scheme): lossy UTF-8. */
     private static String text(byte[] b) {
         return new String(b, StandardCharsets.UTF_8);
+    }
+
+    /** An argument curl sends as it is: see {@link ByteText}. */
+    private static String wire(byte[] b) {
+        return ByteText.decode(b);
     }
 
     private void unsupported(String option) {
@@ -168,21 +174,21 @@ public final class CurlCommandParser {
         switch (spec.longName()) {
             case "request" -> {
                 if (arg.length > 0) {
-                    op.method = text(arg);
+                    op.method = wire(arg);
                 }
             }
             case "head" -> op.head = !negated;
             case "get" -> op.get = !negated;
-            case "url" -> op.urls.add(text(arg));
-            case "header" -> op.headers.add(text(arg));
-            case "user-agent" -> op.userAgent = text(arg);
-            case "referer" -> op.referer = text(arg);
+            case "url" -> op.urls.add(wire(arg));
+            case "header" -> op.headers.add(wire(arg));
+            case "user-agent" -> op.userAgent = wire(arg);
+            case "referer" -> op.referer = wire(arg);
             case "cookie" -> {
-                String c = text(arg);
+                String c = wire(arg);
                 if (c.indexOf('=') >= 0) {
                     op.cookies.add(c);
                 } else if (!c.isEmpty()) {
-                    op.cookieFiles.add(c);
+                    op.cookieFiles.add(text(arg));
                 }
             }
             case "junk-session-cookies" -> op.junkSessionCookies = !negated;
@@ -195,13 +201,13 @@ public final class CurlCommandParser {
             case "time-cond" -> op.timeCond = text(arg);
             case "tr-encoding" -> op.trEncoding = !negated;
             case "crlf" -> op.crlf = !negated;
-            case "request-target" -> op.requestTarget = text(arg);
+            case "request-target" -> op.requestTarget = wire(arg);
             case "proto-default" -> op.protoDefault = text(arg);
             case "disallow-username-in-url" -> op.disallowUsernameInUrl = !negated;
-            case "user" -> op.user = text(arg);
+            case "user" -> op.user = wire(arg);
             case "basic" -> op.basic = !negated;
-            case "oauth2-bearer" -> op.bearer = text(arg);
-            case "range" -> op.range = text(arg);
+            case "oauth2-bearer" -> op.bearer = wire(arg);
+            case "range" -> op.range = wire(arg);
             case "compressed" -> op.compressed = !negated;
             case "http1.0" -> op.http10 = true;
             case "http1.1", "http2", "http2-prior-knowledge", "http3", "http3-only" -> {
@@ -219,13 +225,54 @@ public final class CurlCommandParser {
                 addData(Operation.DataPiece.Kind.JSON, arg);
             }
             default -> {
+                if (PROXY_OPTIONS.contains(spec.longName())) {
+                    // the proxy family is group C in the table (no effect on the bytes) but worth a hint
+                    out.warnings.add(Warning.lossy(optionWarning(spec.longName(), opt, null)));
+                    return;
+                }
                 switch (spec.handling()) {
                     case A -> unsupported(opt);
-                    case B -> out.warnings.add(Warning.lossy(opt
-                            + " changes how curl sends the request and is not reproduced; the request may differ"));
+                    case B -> out.warnings.add(Warning.lossy(optionWarning(spec.longName(), opt,
+                            arg == null ? null : ByteText.display(wire(arg)))));
                     default -> { }
                 }
             }
+        }
+    }
+
+    /** Options that select a proxy for the transfer. */
+    private static final java.util.Set<String> PROXY_OPTIONS = java.util.Set.of("proxy", "preproxy", "socks4",
+            "socks4a", "socks5", "socks5-hostname");
+
+    /**
+     * The one-sentence warning of an option that changes how curl sends the request without changing its bytes.
+     * Credentials never appear in it; only {@code --resolve} and {@code --connect-to} echo their argument.
+     */
+    private static String optionWarning(String name, String opt, String arg) {
+        switch (name) {
+            case "proxy", "preproxy", "socks4", "socks4a", "socks5", "socks5-hostname":
+                return opt + ": the request content is unchanged, but curl would send it through that proxy; "
+                        + "configure an upstream proxy in Burp if needed.";
+            case "resolve", "connect-to":
+                return opt + " " + arg + ": curl would connect to a different address than the URL's host; add a "
+                        + "hostname resolution override in Burp (Settings \u2192 Network \u2192 Connections) to "
+                        + "reproduce it.";
+            case "unix-socket", "abstract-unix-socket":
+                return opt + ": Burp cannot connect to a Unix socket, so the request is not sent over it.";
+            case "cert", "key":
+                return opt + ": curl would present a client TLS certificate; add it in Burp (Settings \u2192 Network "
+                        + "\u2192 TLS \u2192 Client TLS certificates).";
+            case "digest", "ntlm", "ntlm-wb", "negotiate", "anyauth":
+                return opt + ": the authentication handshake is not precomputed and no Authorization header is "
+                        + "added; configure platform authentication in Burp or add the header yourself.";
+            case "aws-sigv4":
+                return opt + ": the AWS signature headers are not computed.";
+            case "config":
+                return opt + ": the config file is not read, so the options inside it are missing.";
+            case "netrc", "netrc-file", "netrc-optional":
+                return opt + ": credentials from .netrc are not read.";
+            default:
+                return opt + " changes how curl sends the request and is not reproduced; the request may differ";
         }
     }
 
@@ -251,10 +298,10 @@ public final class CurlCommandParser {
 
     private void addForm(byte[] arg, boolean literal) {
         try {
-            current.forms.add(literal ? FormField.parseString(text(arg)) : FormField.parse(text(arg)));
+            current.forms.add(literal ? FormField.parseString(wire(arg)) : FormField.parse(wire(arg)));
         } catch (CurlParseException e) {
             out.warnings.add(Warning.lossy("curl rejects this " + (literal ? "--form-string" : "-F")
-                    + " argument (" + e.getMessage() + "); the field was skipped"));
+                    + " argument (" + ByteText.display(e.getMessage()) + "); the field was skipped"));
         }
     }
 

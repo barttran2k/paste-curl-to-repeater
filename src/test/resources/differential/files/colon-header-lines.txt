@@ -1,0 +1,5 @@
+:pseudo: a
+:
+X-F: 1
+; x
+ X-Sp: 2

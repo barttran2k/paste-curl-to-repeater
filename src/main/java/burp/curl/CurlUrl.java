@@ -37,6 +37,10 @@ import java.util.Locale;
  * trimmed, and a literal space inside path, query or fragment is sent as {@code %20}. Other control characters,
  * and spaces in the host, userinfo or port, are still errors.
  *
+ * <p>Bytes: the URL is a wire text ({@link ByteText}): a byte that is not UTF-8 is an escape character. In the
+ * path such a byte becomes {@code %xx} (one byte, lower-case), in the query and userinfo it is kept and the caller
+ * encodes {@link #requestTarget()} with {@link ByteText#encode}.
+ *
  * <p>IDN: {@link #host()} and {@link #hostHeader()} use punycode. curl 8.7.1 built without libidn2 (the macOS
  * system curl) sends the raw UTF-8 host in {@code Host:}; an IDN-enabled curl sends punycode like this class.
  */
@@ -293,33 +297,24 @@ public final class CurlUrl {
 
     // ---- percent handling ----
 
-    /** Percent-decodes; invalid escapes stay literal; bytes are read as UTF-8 (Latin-1 if not valid UTF-8). */
+    /** Percent-decodes; invalid escapes stay literal. The decoded bytes become a wire text ({@link ByteText}). */
     static String percentDecode(String s) {
         if (s.indexOf('%') < 0) {
             return s;
         }
         java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int plain = 0;
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (c == '%' && i + 2 < s.length() && hex(s.charAt(i + 1)) >= 0 && hex(s.charAt(i + 2)) >= 0) {
+                out.writeBytes(ByteText.encode(s.substring(plain, i)));
                 out.write(hex(s.charAt(i + 1)) * 16 + hex(s.charAt(i + 2)));
                 i += 2;
-            } else {
-                byte[] b = String.valueOf(c).getBytes(StandardCharsets.UTF_8);
-                if (Character.isHighSurrogate(c) && i + 1 < s.length()) {
-                    b = s.substring(i, i + 2).getBytes(StandardCharsets.UTF_8);
-                    i++;
-                }
-                out.write(b, 0, b.length);
+                plain = i + 1;
             }
         }
-        byte[] bytes = out.toByteArray();
-        try {
-            return StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
-        } catch (CharacterCodingException e) {
-            return new String(bytes, StandardCharsets.ISO_8859_1);
-        }
+        out.writeBytes(ByteText.encode(s.substring(plain)));
+        return ByteText.decode(out.toByteArray());
     }
 
     private static int hex(char c) {
@@ -345,6 +340,8 @@ public final class CurlUrl {
                 }
                 if (c == ' ') {
                     sb.append("%20");
+                } else if (ByteText.isEscape(c)) {
+                    sb.append('%').append(HEX_LOWER[(c >> 4) & 15]).append(HEX_LOWER[c & 15]);
                 } else {
                     int cp = p.codePointAt(i);
                     if (Character.charCount(cp) == 2) {

@@ -1,0 +1,1 @@
+curl __BASE__/$'\xc3\xa9\xe9'?q=$'\xc3\xa9\xe9'

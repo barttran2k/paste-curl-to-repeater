@@ -153,10 +153,10 @@ class CurlParseTest {
         ParsedCurl b = Curl.parse("curl --digest -u a:b --resolve h:80:1.2.3.4 http://h/x");
         assertTrue(warned(b, Warning.Severity.LOSSY, "--digest"));
         assertTrue(warned(b, Warning.Severity.LOSSY, "--resolve"));
-        assertTrue(b.warnings().stream().allMatch(w -> w.message().contains("differ")));
-        // groups C and D are silent
-        assertEquals(List.of(), Curl.parse("curl -skL --max-time 5 -o /dev/null -v --ftp-pasv --socks5 p:1 http://h/x")
-                .warnings());
+        assertTrue(b.warnings().stream().allMatch(w -> w.message().contains("Burp")));
+        // groups C and D are silent (the proxy family has its own message, see OptionWarningsTest)
+        assertEquals(List.of(), Curl.parse("curl -skL --max-time 5 -o /dev/null -v --ftp-pasv --proxy-insecure "
+                + "--socks5-basic http://h/x").warnings());
         for (String o : new String[] {"-F a=b", "--form-string a=b", "--form-escape", "-T f", "--url-query a=b",
                 "--variable a=b", "--expand-data x", "-z 1", "--tr-encoding", "--request-target /", "--proto-default http",
                 "--crlf", "-b jar.txt", "-H @hdrs.txt", "--disallow-username-in-url"}) {

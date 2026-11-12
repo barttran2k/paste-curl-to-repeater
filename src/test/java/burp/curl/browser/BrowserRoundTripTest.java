@@ -34,7 +34,7 @@ class BrowserRoundTripTest {
 
     /** @return null when the round trip holds, else the failure description */
     static String roundTrip(Flavor f, Req logical) {
-        Req r = Samples.avoidCoreBug(f, Samples.clean(logical));
+        Req r = Samples.clean(logical);
         Gen g = f.gen(r);
         Expectation e = Expectation.of(f, g);
         List<BuiltRequest> built;
@@ -58,17 +58,13 @@ class BrowserRoundTripTest {
         List<DynamicTest> tests = new ArrayList<>();
         for (Flavor f : Flavor.values()) {
             for (Samples.Named s : all) {
-                Req r = Samples.avoidCoreBug(f, Samples.clean(s.req()));
+                Req r = Samples.clean(s.req());
                 if (Samples.notApplicable(f, r) != null) {
                     continue;
                 }
                 tests.add(DynamicTest.dynamicTest(f + " " + s.name(), () -> {
                     Gen g = f.gen(r);
                     Assumptions.assumeTrue(Samples.generatorOutputUnusable(f, g) == null, "generator output unusable");
-                    if (!f.cmd() && DialectDetector.detect(g.text()) == Dialect.CMD) {
-                        assertDocumentedResidualMisdetection(g.text());
-                        return;
-                    }
                     assertNull(roundTrip(f, r));
                 }));
             }
@@ -76,33 +72,20 @@ class BrowserRoundTripTest {
         return tests.stream();
     }
 
-    /** The only POSIX text we may read as cmd: documented in DialectDetectorTest#residualMisdetectionIsDocumented. */
-    static void assertDocumentedResidualMisdetection(String text) {
-        assertTrue(!text.contains("\\\n") && text.matches("(?s).*\\s\\^\".*"),
-                "POSIX text read as CMD outside the documented residual class:\n" + text);
-    }
-
     private static void randomRoundTrip(Flavor f, long seed) {
         Random rnd = new Random(seed);
-        int rewrittenBefore = Samples.REWRITTEN.get();
         int done = 0;
-        int residual = 0;
         int lossless = 0;
         int unusable = 0;
         List<String> failures = new ArrayList<>();
         while (done < RANDOM_PER_FLAVOR) {
-            Req r = Samples.avoidCoreBug(f, Samples.clean(Samples.random(rnd)));
+            Req r = Samples.clean(Samples.random(rnd));
             if (Samples.notApplicable(f, r) != null) {
                 continue;
             }
             Gen g = f.gen(r);
             if (Samples.generatorOutputUnusable(f, g) != null) {
                 unusable++;
-                continue;
-            }
-            if (!f.cmd() && DialectDetector.detect(g.text()) == Dialect.CMD) {
-                assertDocumentedResidualMisdetection(g.text());
-                residual++;
                 continue;
             }
             if (f.cmd()) {
@@ -118,9 +101,8 @@ class BrowserRoundTripTest {
             }
         }
         System.out.println("random round trip " + f + ": " + done + " requests, " + lossless
-                + " carried losslessly; skipped: " + residual + " documented dialect misdetection, " + unusable
-                + " generator output curl refuses; headers rewritten to avoid the core bug (CoreBugsTest): "
-                + (Samples.REWRITTEN.get() - rewrittenBefore) + " of " + (done + unusable + residual) + " drawn");
+                + " carried losslessly; skipped: " + unusable
+                + " generator output curl refuses");
         assertTrue(failures.isEmpty(), String.join("\n=====\n", failures));
         assertTrue(lossless > RANDOM_PER_FLAVOR / 10, "too few lossless cases: " + lossless);
     }
@@ -281,27 +263,22 @@ class BrowserRoundTripTest {
     }
 
     /**
-     * REPORTED, NOT FIXED. DialectDetectorTest#residualMisdetectionIsDocumented (an existing test, which pins
-     * {@code curl -d ' ^"foo' http://x} as CMD) forbids any tightening of rule A, and a bash command whose header value
-     * holds whitespace + caret + quote has exactly that shape when the generator writes it on one line. Chrome joins
-     * with backslash-newline from 3 parts on (then the POSIX veto applies), so only commands of at most two parts are
-     * hit; Firefox and Safari always have a URL plus at least one more part only when there are headers/data.
+     * DialectDetectorTest#residualMisdetectionIsDocumented pins {@code curl -d ' ^"foo' http://x} as CMD, and a bash
+     * command whose header value holds whitespace + caret + quote has exactly that shape when the generator writes it
+     * on one line (Chrome joins with backslash-newline from 3 parts on, then the POSIX veto applies). The detector is
+     * unchanged; {@code Curl.parse} falls back to the other dialect when the detected one cannot read the text.
      */
     @Test
-    void residualDialectMisdetectionOfShortBashCommands() throws Exception {
+    void shortBashCommandsMisdetectedAsCmdStillParse() throws Exception {
         Req r = Req.of("GET", "https://x.test/", Samples.h("X-A", "v ^\"w"));
         String text = Flavor.CHROME_BASH.gen(r).text();
         assertEquals("curl --url 'https://x.test/' -H 'X-A: v ^\"w'", text);
         assertEquals(Dialect.CMD, DialectDetector.detect(text), text);
-        // the consequence: the bash text is tokenized with cmd rules, which cannot read it
-        burp.curl.CurlParseException ex = org.junit.jupiter.api.Assertions.assertThrows(burp.curl.CurlParseException.class,
-                () -> Curl.parse(text));
-        System.out.println("misdetected bash text " + text + " fails with: " + ex.getMessage());
+        assertNull(roundTrip(Flavor.CHROME_BASH, r));
         // with a third part the generator joins with backslash-newline and the veto applies
         Req r3 = Req.of("GET", "https://x.test/", Samples.h("X-A", "v ^\"w"), Samples.h("X-B", "b"));
         String longer = Flavor.CHROME_BASH.gen(r3).text();
         assertEquals(Dialect.POSIX, DialectDetector.detect(longer), longer);
-        assertTrue(new String(Curl.parse(longer).build(FileAccess.DENY).get(0).raw(), StandardCharsets.ISO_8859_1)
-                .contains("\r\nX-A: v ^\"w\r\n"));
+        assertNull(roundTrip(Flavor.CHROME_BASH, r3));
     }
 }

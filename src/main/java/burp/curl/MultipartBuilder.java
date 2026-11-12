@@ -121,7 +121,7 @@ public final class MultipartBuilder {
                 String fn = field.filename();
                 String guess = fn == null ? null : knownType(fn);
                 writeHead(out, disposition, name, fn, field.type(), guess, field.headers(), files);
-                out.write(field.value().getBytes(StandardCharsets.UTF_8));
+                out.write(ByteText.encode(field.value()));
                 break;
             }
             case FILE_CONTENT: {
@@ -216,7 +216,7 @@ public final class MultipartBuilder {
         for (String h : headers) {
             if (FormField.isHeaderFile(h)) {
                 byte[] data = files.read(h.substring(1));
-                for (String line : new String(data, StandardCharsets.UTF_8).split("\r?\n|\r")) {
+                for (String line : ByteText.decode(data).split("\r?\n|\r")) {
                     if (!line.isEmpty()) {
                         user.add(line);
                     }
@@ -292,7 +292,7 @@ public final class MultipartBuilder {
     }
 
     private static void put(ByteArrayOutputStream out, String s) {
-        byte[] b = s.getBytes(StandardCharsets.UTF_8);
+        byte[] b = ByteText.encode(s);
         out.write(b, 0, b.length);
     }
 

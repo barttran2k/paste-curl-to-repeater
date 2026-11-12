@@ -10,9 +10,10 @@ import java.util.List;
  * @param scheme "http" or "https"
  * @param host host for connecting (IPv6 without brackets)
  * @param explicitPort the port when it differs from the scheme default, else -1
- * @param path request path, always starting with "/"
- * @param query query without "?", or null
- * @param typedHeaders the {@code -H} headers exactly as the user typed them, in order (not the ones curl adds)
+ * @param path request path, always starting with "/" (readable text, see typedHeaders)
+ * @param query query without "?", or null (readable text)
+ * @param typedHeaders the {@code -H} headers as the user typed them, in order (not the ones curl adds), as readable
+ *                     text (a byte that is not UTF-8 shows as U+FFFD; the request bytes keep it)
  * @param body the body content as curl was given it: after {@code -d}/{@code -F}/{@code -T} processing but before
  *             {@code --crlf} conversion and chunk encoding (the raw request carries the bytes as sent), empty when the
  *             request has no body
