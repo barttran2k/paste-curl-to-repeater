@@ -27,6 +27,11 @@ final class CurlRequestBuilder {
 
     private final FileAccess files;
     private final Map<Operation.StdinSource, Boolean> stdinRead = new IdentityHashMap<>();
+    /** why each request that could not be built was skipped (a bad URL), in order */
+    final List<String> skippedReasons = new ArrayList<>();
+    private int requestNumber;
+    /** the lossy warning for each skipped request; the caller attaches them to the requests that were built */
+    final List<Warning> skippedWarnings = new ArrayList<>();
 
     CurlRequestBuilder(FileAccess files) {
         this.files = files;
@@ -104,7 +109,17 @@ final class CurlRequestBuilder {
         int index = 0;
         for (String rawUrl : op.urls) {
             List<Warning> w = new ArrayList<>(warnings);
-            CurlUrl url = CurlUrl.parse(prepareUrl(rawUrl, op.globoff, w), op.protoDefault, op.pathAsIs);
+            requestNumber++;
+            CurlUrl url;
+            try {
+                url = CurlUrl.parse(prepareUrl(rawUrl, op.globoff, w), op.protoDefault, op.pathAsIs);
+            } catch (CurlParseException e) {
+                // curl reports the failing URL and goes on with the next one; so do we, without echoing the URL
+                skippedReasons.add(e.getMessage());
+                skippedWarnings.add(Warning.lossy("Request " + requestNumber + " was skipped: " + e.getMessage()));
+                index++;
+                continue;
+            }
             if (op.disallowUsernameInUrl && (url.user() != null)) {
                 w.add(Warning.lossy("curl refuses a URL with a user name when --disallow-username-in-url is "
                         + "given; the request is built anyway"));

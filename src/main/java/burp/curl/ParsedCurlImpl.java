@@ -97,6 +97,24 @@ final class ParsedCurlImpl implements ParsedCurl {
                 builder.buildOperation(op, result);
             }
         }
+        if (!builder.skippedReasons.isEmpty()) {
+            if (result.isEmpty()) {
+                int more = builder.skippedReasons.size() - 1;
+                throw new CurlParseException(builder.skippedReasons.get(0)
+                        + (more > 0 ? " (" + more + " more request" + (more > 1 ? "s" : "") + " failed the same way "
+                                + "or similarly)" : ""));
+            }
+            List<RequestDetails> withNotes = new ArrayList<>(result.size());
+            for (RequestDetails d : result) {
+                List<Warning> all = new ArrayList<>(d.request().warnings());
+                all.addAll(builder.skippedWarnings);
+                BuiltRequest b = d.request();
+                withNotes.add(new RequestDetails(new BuiltRequest(b.host(), b.port(), b.secure(), b.raw(), b.method(),
+                        b.url(), all), d.scheme(), d.host(), d.explicitPort(), d.path(), d.query(),
+                        d.typedHeaders(), d.body()));
+            }
+            return withNotes;
+        }
         return result;
     }
 }

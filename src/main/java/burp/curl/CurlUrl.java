@@ -83,7 +83,7 @@ public final class CurlUrl {
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (c < 0x20 || c == 0x7f) {
-                throw new CurlParseException("URL rejected: malformed input (control character)", i);
+                throw new CurlParseException("URL rejected: malformed input (control character)");
             }
         }
         // scheme
@@ -120,7 +120,7 @@ public final class CurlUrl {
             }
         }
         if (!scheme.equals("http") && !scheme.equals("https")) {
-            throw new CurlParseException("unsupported protocol: " + scheme);
+            throw new CurlParseException("unsupported protocol");
         }
 
         // fragment, authority, path, query
