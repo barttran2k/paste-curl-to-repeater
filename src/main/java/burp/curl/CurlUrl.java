@@ -687,7 +687,12 @@ public final class CurlUrl {
      * @return the new URL
      */
     public CurlUrl withAppendedQuery(String piece) {
-        String p = piece == null ? "" : piece.replace(" ", "%20");
+        String p = piece == null ? "" : piece;
+        int hash = p.indexOf('#');
+        if (hash >= 0) {
+            p = p.substring(0, hash); // a fragment in the appended text is dropped, like in the URL itself
+        }
+        p = lowerPercentHex(p).replace(" ", "%20");
         if (p.isEmpty() && query == null) {
             return this;
         }
@@ -700,6 +705,26 @@ public final class CurlUrl {
             nq = query + "&" + p;
         }
         return new CurlUrl(scheme, hostText, ipv6, explicitPort, user, password, removeDotSegments(path), nq);
+    }
+
+    /** curl's URL API writes the hex digits of every valid {@code %XX} in appended query text in lower case. */
+    private static String lowerPercentHex(String s) {
+        StringBuilder sb = null;
+        for (int i = 0; i + 2 < s.length(); i++) {
+            if (s.charAt(i) == '%' && isHex(s.charAt(i + 1)) && isHex(s.charAt(i + 2))) {
+                if (sb == null) {
+                    sb = new StringBuilder(s);
+                }
+                sb.setCharAt(i + 1, Character.toLowerCase(s.charAt(i + 1)));
+                sb.setCharAt(i + 2, Character.toLowerCase(s.charAt(i + 2)));
+                i += 2;
+            }
+        }
+        return sb == null ? s : sb.toString();
+    }
+
+    private static boolean isHex(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
     }
 
     /**
