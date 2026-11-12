@@ -11,11 +11,11 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bugs found in the core (not in a tokenizer) while testing browser output. They are NOT fixed here and NOT hidden:
- * these tests fail until the owner of the request builder fixes them. Minimal inputs only; each compares with the
- * bytes the real curl sends.
+ * Regression tests for two core defects found while testing browser output (fixed): argument bytes that are not
+ * UTF-8 were replaced by U+FFFD, and a header with an empty name was sent. Minimal inputs only; each compares with
+ * the bytes the real curl sends.
  */
-class CoreBugsTest {
+class CurlWireBytesRegressionTest {
     private static void sameAsRealCurl(String commandWithPortPlaceholder) throws Exception {
         Assumptions.assumeTrue(RealCurlBatch.available(), "curl, bash >= 4.2 or a UTF-8 locale is missing");
         RealCurlBatch.Outcome o = RealCurlBatch.run(port -> List.of(commandWithPortPlaceholder.replace("PORT", Integer.toString(port))));
@@ -28,8 +28,7 @@ class CoreBugsTest {
     /**
      * Real curl 8.7.1 sends the header bytes exactly as bash produced them: $'\xe9' is the single byte E9.
      * Firefox's and Safari's "Copy as cURL" for bash write U+0080..U+00FF this way, so any such header value is
-     * corrupted: CurlCommandParser decodes -H arguments as UTF-8 text (Operation.headers is a List of String) and
-     * U+FFFD is sent.
+     * corrupted when the arguments are decoded as UTF-8 text (see ByteText).
      */
     @Test
     void headerWithNonUtf8BytesKeepsItsBytes() throws Exception {
@@ -44,7 +43,7 @@ class CoreBugsTest {
 
     /**
      * Real curl 8.7.1 does not send a -H argument whose header name is empty, such as the HTTP/2 pseudo header
-     * ':authority: example.test' that Firefox and Safari list among the request headers. We send it.
+     * ':authority: example.test' that Firefox and Safari list among the request headers.
      */
     @Test
     void headerWithEmptyNameIsDroppedLikeCurl() throws Exception {

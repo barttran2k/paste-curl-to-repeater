@@ -51,7 +51,7 @@ class BrowserVsRealCurlTest {
     private static List<Item> handWritten(Flavor bash) {
         List<Item> out = new ArrayList<>();
         for (Samples.Named s : Samples.nasty()) {
-            Req r = Samples.avoidCoreBug(bash, Samples.clean(s.req()));
+            Req r = Samples.clean(s.req());
             if (Samples.notApplicable(bash, r) == null && Samples.generatorOutputUnusable(bash, bash.gen(r)) == null
                     && !Samples.splitsTheRequestOnTheWire(bash, bash.gen(r))) {
                 out.add(new Item(s.name(), r));
@@ -64,7 +64,7 @@ class BrowserVsRealCurlTest {
         Random rnd = new Random(seed);
         List<Item> out = new ArrayList<>();
         while (out.size() < RANDOM_PER_BROWSER) {
-            Req r = Samples.avoidCoreBug(bash, Samples.clean(Samples.random(rnd)));
+            Req r = Samples.clean(Samples.random(rnd));
             if (Samples.notApplicable(bash, r) != null || Samples.generatorOutputUnusable(bash, bash.gen(r)) != null
                     || Samples.splitsTheRequestOnTheWire(bash, bash.gen(r))
                     || (cmdOrNull != null && Samples.splitsTheRequestOnTheWire(cmdOrNull, cmdOrNull.gen(r)))) {

@@ -12,7 +12,9 @@ import java.util.List;
  * What curl must send for the arguments a browser generator intends, after the exact information loss of the
  * generator's shell escaping ({@link #loss}). Header handling follows curl's {@code Curl_add_custom_headers}: the
  * {@code -H} string is sent verbatim, unless nothing but white space follows the colon (header removed) or the string
- * is {@code Name;} (sent as {@code Name:}).
+ * is {@code Name;} (sent as {@code Name:}). A string that starts with a colon (an HTTP/2 pseudo header such as
+ * {@code :authority: x}) is never sent: measured with curl 8.7.1 and pinned in the differential corpus
+ * ({@code header-colon-first-*}).
  */
 final class Expectation {
     final String method;
@@ -20,6 +22,8 @@ final class Expectation {
     final List<byte[]> headerLines = new ArrayList<>();
     /** Header names whose -H argument has an empty value: curl must not send them. */
     final List<String> removedHeaders = new ArrayList<>();
+    /** -H arguments that start with a colon: curl must not send them. */
+    final List<byte[]> droppedLines = new ArrayList<>();
     final byte[] body;
     final List<byte[]> argvBytes = new ArrayList<>();
 
@@ -137,7 +141,9 @@ final class Expectation {
         for (byte[] h : headers) {
             String s = latin1(h);
             int colon = s.indexOf(':');
-            if (colon >= 0) {
+            if (colon == 0) {
+                e.droppedLines.add(h);
+            } else if (colon >= 0) {
                 int p = colon + 1;
                 while (p < s.length() && isSpace(s.charAt(p))) {
                     p++;
@@ -221,6 +227,17 @@ final class Expectation {
             needle[needle.length - 1] = 10;
             if (indexOf(raw, needle, lineEnd, bodyStart) < 0) {
                 return "header line missing: [" + latin1(h).replace("\r", "\\r").replace("\n", "\\n") + "]";
+            }
+        }
+        for (byte[] h : droppedLines) {
+            byte[] needle = new byte[h.length + 4];
+            needle[0] = 13;
+            needle[1] = 10;
+            System.arraycopy(h, 0, needle, 2, h.length);
+            needle[needle.length - 2] = 13;
+            needle[needle.length - 1] = 10;
+            if (indexOf(raw, needle, lineEnd, bodyStart) >= 0) {
+                return "header line starting with a colon must not be sent: [" + latin1(h) + "]";
             }
         }
         String head = latin1(Arrays.copyOfRange(raw, lineEnd, bodyStart)).toLowerCase(java.util.Locale.ROOT);
