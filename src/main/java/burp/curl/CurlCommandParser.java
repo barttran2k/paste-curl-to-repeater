@@ -49,20 +49,12 @@ public final class CurlCommandParser {
     /**
      * @param args the words after the {@code curl} word
      * @param command the shell command the words came from (for its stdin)
-     * @return the operations (those without a URL are dropped) and the warnings
-     * @throws CurlParseException on a missing option argument or when no operation has a URL
-     */
-    static Parsed parse(List<Token> args, CommandLine command) throws CurlParseException {
-        return parse(args, command, FileAccess.DENY, false);
-    }
-
-    /**
-     * Like {@link #parse(List, CommandLine)} with access to the files that variables read at parse time.
-     *
      * @param files source of {@code --variable name@file} contents
      * @param probe true when {@code files} only records the paths: arguments that were expanded with the content of
      *              a file variable are then replaced by harmless ones, because the paths they would name are not
      *              known yet and must not be listed
+     * @return the operations (those without a URL are dropped) and the warnings
+     * @throws CurlParseException on a missing option argument or when no operation has a URL
      */
     static Parsed parse(List<Token> args, CommandLine command, FileAccess files, boolean probe)
             throws CurlParseException {

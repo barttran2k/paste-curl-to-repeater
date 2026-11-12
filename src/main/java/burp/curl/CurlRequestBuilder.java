@@ -366,7 +366,7 @@ final class CurlRequestBuilder {
                 if (sb == null) {
                     sb = new StringBuilder(piece.length() + 8).append(piece, 0, i);
                 }
-                sb.append('%').append(HEX_UPPER[c >> 4]).append(HEX_UPPER[c & 15]);
+                PercentEncoding.append(sb, c, true);
             } else if (sb != null) {
                 sb.append(c);
             }
@@ -786,40 +786,11 @@ final class CurlRequestBuilder {
 
     /** curl's {@code url} variable function: everything except {@code A-Za-z0-9-._~} becomes %XX (upper case). */
     static byte[] urlEncodeAll(byte[] in) {
-        ByteArrayOutputStream o = new ByteArrayOutputStream(in.length * 3);
-        for (byte x : in) {
-            int c = x & 0xff;
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.'
-                    || c == '_' || c == '~') {
-                o.write(c);
-            } else {
-                o.write('%');
-                o.write(HEX_UPPER[c >> 4]);
-                o.write(HEX_UPPER[c & 15]);
-            }
-        }
-        return o.toByteArray();
+        return PercentEncoding.encode(in, false);
     }
-
-    private static final char[] HEX_UPPER = "0123456789ABCDEF".toCharArray();
 
     /** curl's {@code --data-urlencode} content: unreserved kept, space becomes '+', the rest %XX (upper case). */
     static byte[] urlencode(byte[] in) {
-        ByteArrayOutputStream o = new ByteArrayOutputStream(in.length * 3);
-        for (byte x : in) {
-            int c = x & 0xff;
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.'
-                    || c == '_' || c == '~') {
-                o.write(c);
-            } else if (c == ' ') {
-                o.write('+');
-            } else {
-                o.write('%');
-                o.write(HEX_UPPER[c >> 4]);
-                o.write(HEX_UPPER[c & 15]);
-            }
-        }
-        return o.toByteArray();
+        return PercentEncoding.encode(in, true);
     }
-
 }
