@@ -102,6 +102,8 @@ class NoLeakInMessagesTest {
         "curl http://h.test/ --url-query '+@@\u0001'",
         "curl http://h.test/ -d '@@\u0001' -G",
         "curl -@@ http://h.test/ -d",
+        "curl http://h.test/ ; curl -u @@ -d",
+        "curl http://h.test/ ; curl --header",
         "curl --@@",
         "curl -d",
         // cmd dialect
