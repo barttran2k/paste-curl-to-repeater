@@ -1,0 +1,1 @@
+curl -e 'https://ref.example/page?x=1' __BASE__/r

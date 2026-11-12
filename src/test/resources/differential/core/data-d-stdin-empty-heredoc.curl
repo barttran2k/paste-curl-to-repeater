@@ -1,0 +1,2 @@
+curl -d @- __BASE__/in <<'EOF'
+EOF

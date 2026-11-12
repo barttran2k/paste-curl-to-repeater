@@ -1,0 +1,1 @@
+curl --http1.1 __BASE__/new

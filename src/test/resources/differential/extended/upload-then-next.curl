@@ -1,0 +1,1 @@
+curl -T a.txt __BASE__/u1 --next -X DELETE __BASE__/u2

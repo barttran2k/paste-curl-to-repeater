@@ -1,0 +1,1 @@
+curl -u alice:pw -H 'Authorization: Token t0k3n' __BASE__/h

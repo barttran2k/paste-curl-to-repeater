@@ -1,0 +1,4 @@
+curl -d @- __BASE__/first <<'EOF'
+one=1
+EOF
+curl __BASE__/second

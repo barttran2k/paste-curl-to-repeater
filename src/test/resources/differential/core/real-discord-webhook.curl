@@ -1,0 +1,1 @@
+curl -H "Content-Type: application/json" -X POST -d '{"username": "bot", "content": "deploy finished ✅"}' __BASE__/api/webhooks/123456789/abcdefghijklmnop

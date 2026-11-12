@@ -1,0 +1,1 @@
+curl --form-string 'a=@notfile' --form-string 'b=<notfile' --form-string 'c=x;type=y' __BASE__/f

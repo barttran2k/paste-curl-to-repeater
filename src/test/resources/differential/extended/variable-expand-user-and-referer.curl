@@ -1,0 +1,1 @@
+curl --variable v=x --expand-user '{{v}}:pw' --expand-referer 'https://ref.example/{{v}}' __BASE__/x

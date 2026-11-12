@@ -1,0 +1,1 @@
+curl -H 'Accept: a/b' -H 'Accept: c/d' __BASE__/h

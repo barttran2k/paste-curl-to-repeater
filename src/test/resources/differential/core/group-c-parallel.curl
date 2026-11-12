@@ -1,0 +1,1 @@
+curl -s -Z --parallel-max 2 __BASE__/g1 __BASE__/g2

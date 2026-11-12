@@ -1,0 +1,4 @@
+curl -T - __BASE__/up <<'EOF'
+line one
+line two
+EOF

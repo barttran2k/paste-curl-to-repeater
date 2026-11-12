@@ -1,0 +1,1 @@
+curl --data-urlencode 'q=hello world & more/é~-_.' __BASE__/d

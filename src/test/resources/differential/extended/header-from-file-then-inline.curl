@@ -1,0 +1,1 @@
+curl -H @hdr.txt -H 'X-After: 1' __BASE__/h

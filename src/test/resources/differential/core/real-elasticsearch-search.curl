@@ -1,0 +1,4 @@
+curl -XPOST '__BASE__/logs-*/_search?pretty' -H 'Content-Type: application/json' -d'{
+  "query": { "bool": { "must": [ { "match": { "level": "error" } } ], "filter": { "range": { "@timestamp": { "gte": "now-1h" } } } } },
+  "size": 5
+}'

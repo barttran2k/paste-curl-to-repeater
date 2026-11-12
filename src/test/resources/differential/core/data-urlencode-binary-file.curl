@@ -1,0 +1,1 @@
+curl --data-urlencode 'bin@body.bin' __BASE__/d

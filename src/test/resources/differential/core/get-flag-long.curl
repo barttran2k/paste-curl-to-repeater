@@ -1,0 +1,1 @@
+curl --get --data 'a=1' --data-raw 'b=@x' __BASE__/search

@@ -1,0 +1,1 @@
+curl -X POST -H 'Authorization: Bearer xoxb-000000000-FAKE-TOKEN' -H 'Content-type: application/json; charset=utf-8' --data '{"channel":"C0123456789","text":"Hello, world :wave:","blocks":[{"type":"section","text":{"type":"mrkdwn","text":"*bold* _italic_"}}]}' __BASE__/api/chat.postMessage

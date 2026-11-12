@@ -1,0 +1,1 @@
+curl --url-query 'a=1' '__BASE__/q#frag'

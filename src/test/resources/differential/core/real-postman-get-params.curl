@@ -1,0 +1,3 @@
+curl --location '__BASE__/api/v1/customers?active=true&limit=10' \
+--header 'Accept: application/json' \
+--header 'X-Api-Key: fake-api-key'

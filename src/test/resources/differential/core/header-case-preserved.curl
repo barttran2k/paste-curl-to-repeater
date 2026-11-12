@@ -1,0 +1,1 @@
+curl -H 'x-lower: 1' -H 'X-UPPER: 2' -H 'X-MiXeD: 3' __BASE__/h

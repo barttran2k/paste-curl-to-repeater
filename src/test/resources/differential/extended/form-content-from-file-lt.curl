@@ -1,0 +1,1 @@
+curl -F 'note=<a.txt' __BASE__/f

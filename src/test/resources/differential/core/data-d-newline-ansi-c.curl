@@ -1,0 +1,1 @@
+curl -d $'a=1\nb=2\r\nc=3' __BASE__/d

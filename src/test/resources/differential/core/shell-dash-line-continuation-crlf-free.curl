@@ -1,0 +1,4 @@
+curl -s \
+-X POST \
+-d 'a=1' \
+__BASE__/lc

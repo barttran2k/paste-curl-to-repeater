@@ -1,0 +1,1 @@
+curl --variable m=PATCH --expand-request '{{m}}' __BASE__/x

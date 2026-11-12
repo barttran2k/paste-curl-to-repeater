@@ -1,0 +1,3 @@
+curl --data-urlencode 'text@-' __BASE__/in <<'EOF'
+two words
+EOF

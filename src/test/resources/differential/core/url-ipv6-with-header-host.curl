@@ -1,0 +1,2 @@
+#! requires-ipv6
+curl -H 'Accept: */*' 'http://[::1]:__PORT__/six?q=1'

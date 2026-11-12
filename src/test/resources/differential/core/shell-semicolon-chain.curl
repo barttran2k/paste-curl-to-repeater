@@ -1,0 +1,1 @@
+curl -s __BASE__/one; curl -s -X DELETE __BASE__/two

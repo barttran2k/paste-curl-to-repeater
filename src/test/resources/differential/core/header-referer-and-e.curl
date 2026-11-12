@@ -1,0 +1,1 @@
+curl -e 'https://one.example/' -H 'Referer: https://two.example/' __BASE__/h

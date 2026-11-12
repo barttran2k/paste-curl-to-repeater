@@ -1,0 +1,1 @@
+curl --data-binary @- __BASE__/in <<< 'one line'

@@ -1,0 +1,4 @@
+curl -d @- __BASE__/in <<-EOF
+	tab-indented line
+	second line
+	EOF

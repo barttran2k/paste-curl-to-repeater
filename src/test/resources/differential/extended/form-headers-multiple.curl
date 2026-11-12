@@ -1,0 +1,1 @@
+curl -F 'f=@a.txt;headers=X-A: 1;headers=X-B: 2' __BASE__/f

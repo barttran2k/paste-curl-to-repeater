@@ -1,0 +1,2 @@
+curl -s -H 'X-One: 1' __BASE__/first
+curl -s -A 'Second/2' -b 'a=1' __BASE__/second

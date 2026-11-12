@@ -1,0 +1,1 @@
+curl -d "say \"hi\" \\ back \$ dollar \` tick" __BASE__/q

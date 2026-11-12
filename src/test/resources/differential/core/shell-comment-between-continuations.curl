@@ -1,0 +1,3 @@
+curl -s \
+  -H 'X-A: 1' \
+  __BASE__/comment

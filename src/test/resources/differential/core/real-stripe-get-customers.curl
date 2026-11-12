@@ -1,0 +1,4 @@
+curl -G __BASE__/v1/customers \
+  -u sk_test_FAKEFAKEFAKEFAKE: \
+  -d limit=3 \
+  -d "expand[]=data.default_source"

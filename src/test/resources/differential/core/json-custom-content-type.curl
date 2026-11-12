@@ -1,0 +1,1 @@
+curl --json '{"a":1}' -H 'Content-Type: application/vnd.api+json' __BASE__/j

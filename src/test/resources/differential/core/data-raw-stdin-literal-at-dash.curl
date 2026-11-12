@@ -1,0 +1,1 @@
+curl --data-raw @- __BASE__/in <<< 'ignored'

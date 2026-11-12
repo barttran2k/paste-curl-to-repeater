@@ -1,0 +1,1 @@
+curl --upload-file payload.json __BASE__/api/doc.json

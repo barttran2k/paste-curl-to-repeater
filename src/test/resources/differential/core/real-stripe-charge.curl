@@ -1,0 +1,7 @@
+curl __BASE__/v1/charges \
+  -u sk_test_FAKEFAKEFAKEFAKE: \
+  -d amount=2000 \
+  -d currency=usd \
+  -d source=tok_visa \
+  -d description="My First Test Charge (created for API docs)" \
+  -d "metadata[order_id]=6735"

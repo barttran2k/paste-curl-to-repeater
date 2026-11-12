@@ -1,0 +1,9 @@
+curl --location --request POST '__BASE__/api/v1/customers' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer fake-token-1234567890' \
+--header 'Cookie: connect.sid=s%3Afake.signature' \
+--data-raw '{
+    "name": "Alice Example",
+    "email": "alice@example.test",
+    "tags": ["a", "b"]
+}'

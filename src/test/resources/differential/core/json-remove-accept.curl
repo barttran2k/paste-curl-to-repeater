@@ -1,0 +1,1 @@
+curl --json '{"a":1}' -H 'Accept:' __BASE__/j

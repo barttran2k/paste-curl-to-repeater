@@ -1,0 +1,1 @@
+curl --request PATCH -H 'Content-Type: application/merge-patch+json' -d '{"name":"x"}' __BASE__/api/items/1

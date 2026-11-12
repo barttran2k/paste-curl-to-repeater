@@ -1,0 +1,1 @@
+curl -s --retry 3 --retry-all-errors --retry-connrefused --retry-max-time 30 __BASE__/gc

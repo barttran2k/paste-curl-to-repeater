@@ -1,0 +1,1 @@
+curl __BASE__/one __BASE__/two __BASE__/three

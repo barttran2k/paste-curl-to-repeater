@@ -1,0 +1,1 @@
+curl --limit-rate 100k --keepalive-time 30 --tcp-nodelay -s __BASE__/gc

@@ -1,0 +1,1 @@
+curl --url-query @a.txt --url-query 'f@b.txt' __BASE__/q

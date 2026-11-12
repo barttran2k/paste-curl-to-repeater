@@ -1,0 +1,2 @@
+#! requires-ipv6
+curl -g 'http://[::1]:__PORT__/v6?a[]=1'

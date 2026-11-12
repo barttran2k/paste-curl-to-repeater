@@ -1,0 +1,5 @@
+curl --location '__BASE__/api/v1/upload' \
+--header 'Authorization: Bearer fake-token' \
+--form 'file=@"a.txt"' \
+--form 'description="Quarterly report"' \
+--form 'visibility="private"'

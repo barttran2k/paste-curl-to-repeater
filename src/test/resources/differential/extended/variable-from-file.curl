@@ -1,0 +1,1 @@
+curl --variable v@a.txt --expand-data '{{v}}|{{v:trim}}' __BASE__/x

@@ -1,0 +1,1 @@
+curl -F 'name=John' -F 'age=30' __BASE__/f

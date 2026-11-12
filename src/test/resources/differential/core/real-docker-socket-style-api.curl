@@ -1,0 +1,1 @@
+curl -s -X POST -H 'Content-Type: application/json' -d '{"Image":"alpine","Cmd":["echo","hello"],"AttachStdout":true}' '__BASE__/v1.43/containers/create?name=test'

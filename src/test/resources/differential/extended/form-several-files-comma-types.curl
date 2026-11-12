@@ -1,0 +1,1 @@
+curl -F 'files=@a.txt;type=text/x-a,b.txt;type=text/x-b' __BASE__/f

@@ -1,0 +1,1 @@
+curl -s -d a=1 __BASE__/pipe | tr a-z A-Z

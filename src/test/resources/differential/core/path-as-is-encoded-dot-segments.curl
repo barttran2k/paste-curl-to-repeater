@@ -1,0 +1,1 @@
+curl --path-as-is '__BASE__/a/%2e%2e/b/%2E/c'

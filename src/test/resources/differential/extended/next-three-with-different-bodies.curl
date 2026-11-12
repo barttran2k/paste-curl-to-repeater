@@ -1,0 +1,1 @@
+curl -d a=1 __BASE__/a --next -F 'b=2' __BASE__/b --next -T a.txt __BASE__/c

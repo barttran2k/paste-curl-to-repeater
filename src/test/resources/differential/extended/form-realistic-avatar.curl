@@ -1,0 +1,6 @@
+curl -X POST '__BASE__/api/users/42/avatar' \
+  -H 'Accept: application/json' \
+  -H 'X-CSRF-Token: Zm9v' \
+  -F 'avatar=@t.png;type=image/png' \
+  -F 'crop={"x":0,"y":0,"w":64,"h":64};type=application/json' \
+  -F 'alt=Profile picture'

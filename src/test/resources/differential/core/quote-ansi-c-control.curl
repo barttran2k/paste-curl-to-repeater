@@ -1,0 +1,1 @@
+curl -d $'bell\a-bs\b-esc\e-ff\f-vt\v-q\?-c\cA' --data-binary $'\x01\x7f' __BASE__/q

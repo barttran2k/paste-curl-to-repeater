@@ -1,0 +1,9 @@
+curl -X POST __BASE__/ws/Calculator.asmx \
+  -H 'Content-Type: text/xml; charset=utf-8' \
+  -H 'SOAPAction: "http://tempuri.example/Add"' \
+  -d '<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.soap.example/envelope/">
+  <soap:Body>
+    <Add xmlns="http://tempuri.example/"><intA>1</intA><intB>2</intB></Add>
+  </soap:Body>
+</soap:Envelope>'

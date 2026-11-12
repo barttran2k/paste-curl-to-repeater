@@ -1,0 +1,1 @@
+curl --proto-default http __HOSTPORT__/x

@@ -1,0 +1,1 @@
+curl --data-binary @lines.txt -d 'tail=1' __BASE__/d

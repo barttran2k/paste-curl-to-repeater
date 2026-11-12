@@ -1,0 +1,5 @@
+curl -X GET '__BASE__/bucket/key.txt?versionId=3HL4kqtJlcpXroDTDmJ' \
+  -H 'Authorization: AWS4-HMAC-SHA256 Credential=AKIAFAKEFAKEFAKE/20240101/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
+  -H 'x-amz-content-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' \
+  -H 'x-amz-date: 20240101T000000Z' \
+  -H 'Host: examplebucket.s3.example'

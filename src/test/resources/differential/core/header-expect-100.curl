@@ -1,0 +1,1 @@
+curl -H 'Expect: 100-continue' -d 'abc' __BASE__/h

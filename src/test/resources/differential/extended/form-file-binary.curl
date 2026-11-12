@@ -1,0 +1,1 @@
+curl -F 'blob=@body.bin;type=application/octet-stream' __BASE__/f

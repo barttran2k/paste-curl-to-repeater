@@ -1,0 +1,4 @@
+curl -H 'Content-Type: application/json' -d "{
+  \"name\": \"multi\",
+  \"items\": [1, 2, 3]
+}" __BASE__/q

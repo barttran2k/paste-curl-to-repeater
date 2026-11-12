@@ -1,0 +1,1 @@
+curl -X PUT -H 'If-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"' -H 'Content-Type: application/json' -d '{"title":"updated"}' __BASE__/articles/7

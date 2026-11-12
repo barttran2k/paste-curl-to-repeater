@@ -1,0 +1,1 @@
+curl -H 'Content-Type: application/x-foo' -F 'a=b' __BASE__/f

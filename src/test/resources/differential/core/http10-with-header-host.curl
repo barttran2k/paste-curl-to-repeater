@@ -1,0 +1,1 @@
+curl -0 -H 'Host: virt.example' __BASE__/old

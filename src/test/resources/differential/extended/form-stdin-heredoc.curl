@@ -1,0 +1,4 @@
+curl -F 'f=@-' __BASE__/f <<'EOF'
+from stdin
+second line
+EOF

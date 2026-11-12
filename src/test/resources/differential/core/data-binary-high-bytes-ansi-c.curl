@@ -1,0 +1,1 @@
+curl --data-binary $'\xff\xfe\x80\x81 high bytes' __BASE__/d

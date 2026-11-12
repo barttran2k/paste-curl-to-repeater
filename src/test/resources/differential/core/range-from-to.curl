@@ -1,0 +1,1 @@
+curl -r 0-99 __BASE__/f.bin
