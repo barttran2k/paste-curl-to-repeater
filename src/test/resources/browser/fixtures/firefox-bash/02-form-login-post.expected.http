@@ -1,0 +1,20 @@
+POST /login HTTP/1.1
+Host: __HOSTPORT__
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Content-Type: application/x-www-form-urlencoded
+Origin: http://__HOSTPORT__
+Connection: keep-alive
+Referer: http://__HOSTPORT__/login
+Cookie: csrftoken=fake-csrf-token
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+Priority: u=0, i
+Content-Length: 85
+
+username=alice&password=s3cret-fake%21&remember=on&next=%2Fdashboard%3Ftab%3Dsettings

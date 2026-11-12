@@ -1,0 +1,11 @@
+curl 'http://__HOSTPORT__/login' \
+-X 'POST' \
+-H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+-H 'Accept-Language: en-US,en;q=0.9' \
+-H 'Content-Type: application/x-www-form-urlencoded' \
+-H 'Origin: http://__HOSTPORT__' \
+-H 'Referer: http://__HOSTPORT__/login' \
+-H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15' \
+-H 'Cookie: csrftoken=fake-csrf-token' \
+-H 'Host: __HOSTPORT__' \
+--data 'username=alice&password=s3cret-fake%21&remember=on&next=%2Fdashboard%3Ftab%3Dsettings'

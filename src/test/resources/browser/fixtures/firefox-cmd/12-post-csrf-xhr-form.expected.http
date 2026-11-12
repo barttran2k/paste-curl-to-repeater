@@ -1,0 +1,20 @@
+POST /api/track HTTP/1.1
+Host: __HOSTPORT__
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Origin: http://__HOSTPORT__
+Connection: keep-alive
+Referer: http://__HOSTPORT__/app/users/42
+Cookie: session=fake-session-id; csrftoken=fake-csrf-token
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-CSRF-Token: fake-csrf-token
+X-Requested-With: XMLHttpRequest
+Content-Length: 46
+
+event=click&target=%23buy-now&ts=1700000000000

@@ -1,0 +1,14 @@
+curl.exe ^"http://__HOSTPORT__/dashboard^" ^
+  -H ^"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0^" ^
+  -H ^"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8^" ^
+  -H ^"Accept-Language: en-US,en;q=0.5^" ^
+  -H ^"Accept-Encoding: gzip, deflate, br, zstd^" ^
+  -H ^"Connection: keep-alive^" ^
+  -H ^"Cookie: session=fake-session-id; _ga=GA1.1.123456789.1700000000^" ^
+  -H ^"Upgrade-Insecure-Requests: 1^" ^
+  -H ^"Sec-Fetch-Dest: document^" ^
+  -H ^"Sec-Fetch-Mode: navigate^" ^
+  -H ^"Sec-Fetch-Site: none^" ^
+  -H ^"Sec-Fetch-User: ?1^" ^
+  -H ^"Priority: u=0, i^" ^
+  -H ^"TE: trailers^"

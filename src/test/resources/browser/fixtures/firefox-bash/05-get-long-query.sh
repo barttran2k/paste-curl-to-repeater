@@ -1,0 +1,13 @@
+curl 'http://__HOSTPORT__/search?q=curl+to+repeater&filter%5B1%5D=value-1&sort=name%2Casc&filter%5B2%5D=value-2&sort=name%2Casc&filter%5B3%5D=value-3&sort=name%2Casc&filter%5B4%5D=value-4&sort=name%2Casc&filter%5B5%5D=value-5&sort=name%2Casc&filter%5B6%5D=value-6&sort=name%2Casc&filter%5B7%5D=value-7&sort=name%2Casc&filter%5B8%5D=value-8&sort=name%2Casc&filter%5B9%5D=value-9&sort=name%2Casc&filter%5B10%5D=value-10&sort=name%2Casc&filter%5B11%5D=value-11&sort=name%2Casc&filter%5B12%5D=value-12&sort=name%2Casc' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en-US,en;q=0.5' \
+  -H 'Accept-Encoding: gzip, deflate, br, zstd' \
+  -H 'Origin: http://__HOSTPORT__' \
+  -H 'Connection: keep-alive' \
+  -H 'Referer: http://__HOSTPORT__/search' \
+  -H 'Cookie: session=fake-session-id; csrftoken=fake-csrf-token' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'Priority: u=0'

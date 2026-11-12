@@ -328,6 +328,76 @@ final class Samples {
                 stripUnsendable(r.safariContentType()));
     }
 
+    /** @return true when the bytes are well-formed UTF-8 */
+    static boolean validUtf8(byte[] b) {
+        try {
+            java.nio.charset.StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(b));
+            return true;
+        } catch (java.nio.charset.CharacterCodingException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Inputs excluded from the general round trip because the generator output is something real curl refuses.
+     * @return null when fine, otherwise the reason
+     */
+    static String generatorOutputUnusable(Flavor f, BrowserGenerators.Gen g) {
+        List<String> a = g.argv();
+        boolean hasData = a.contains("--data-raw") || a.contains("--data-binary") || a.contains("--data");
+        if (a.contains("-I") && hasData) {
+            return "curl refuses -I together with a body (exit 2): Firefox emits both for HEAD + urlencoded body";
+        }
+        return null;
+    }
+
+    /**
+     * Works around a bug found in the core (W3a's code), which CoreBugsTest keeps failing: header and cookie
+     * arguments are decoded as UTF-8 text, so bytes that are not UTF-8 (the Latin-1 bytes bash makes of Firefox's and
+     * Safari's backslash-x escapes, and half surrogates) become U+FFFD. In the general tests only, header names and
+     * values of those two bash flavours get such characters replaced by 'x'; bodies and URLs are untouched.
+     * @return the request with the characters of the bug class removed from its headers
+     */
+    static Req avoidCoreBug(Flavor f, Req r) {
+        List<Hdr> hs = new ArrayList<>();
+        boolean latin1Bug = f == Flavor.FIREFOX_BASH || f == Flavor.SAFARI_BASH;
+        for (Hdr h : r.headers()) {
+            String name = h.name();
+            if (f != Flavor.CHROME_BASH && f != Flavor.CHROME_CMD && name.startsWith(":")) {
+                // second core bug: real curl drops a -H argument whose name is empty (":authority: x"), we send it
+                name = "X" + name.substring(1);
+            }
+            hs.add(latin1Bug ? new Hdr(xify(name), xify(h.value())) : new Hdr(name, h.value()));
+        }
+        return r.withHeaders(hs);
+    }
+
+    private static String xify(String s) {
+        StringBuilder b = new StringBuilder();
+        for (char c : s.toCharArray()) {
+            b.append((c >= 0x80 && c <= 0xFF) || Character.isSurrogate(c) ? 'x' : c);
+        }
+        return b.toString();
+    }
+
+    /**
+     * A header value that ends with CRLF or holds CRLF CRLF ends the request head early on the wire: the rest of the
+     * request is then a second, malformed request for any server. Real-curl comparisons skip these.
+     * @return true when the flavour's clipboard text sends such a header
+     */
+    static boolean splitsTheRequestOnTheWire(Flavor f, BrowserGenerators.Gen g) {
+        List<String> a = g.argv();
+        for (int i = 0; i + 1 < a.size(); i++) {
+            if (a.get(i).equals("-H") || a.get(i).equals("-b")) {
+                String v = new String(Expectation.loss(f, a.get(i + 1)), java.nio.charset.StandardCharsets.ISO_8859_1);
+                if (v.endsWith("\r\n") || v.contains("\r\n\r\n")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /**
      * Whether a logical request is inside the domain a flavour can express at all.
      * @return null when applicable, otherwise the reason

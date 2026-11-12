@@ -1,0 +1,26 @@
+POST /api/upload HTTP/1.1
+Host: __HOSTPORT__
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Origin: http://__HOSTPORT__
+Connection: keep-alive
+Referer: http://__HOSTPORT__/app/upload
+Cookie: session=fake-session-id; csrftoken=fake-csrf-token
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: multipart/form-data; boundary=----geckoformboundary4c7e91ab2d3f50168e9a7b6c5d4e3f21
+Content-Length: 349
+
+------geckoformboundary4c7e91ab2d3f50168e9a7b6c5d4e3f21
+Content-Disposition: form-data; name="title"
+
+Quarterly report
+------geckoformboundary4c7e91ab2d3f50168e9a7b6c5d4e3f21
+Content-Disposition: form-data; name="file"; filename="report.bin"
+Content-Type: application/octet-stream
+
+------geckoformboundary4c7e91ab2d3f50168e9a7b6c5d4e3f21--

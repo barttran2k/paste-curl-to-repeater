@@ -40,6 +40,17 @@ class PosixTokenizerGroupingTest {
     }
 
     @Test
+    void closingParenGluedToTheLastWord() throws Exception {
+        assertEquals(List.of(List.of("curl", "-s", "http://h/sub")), cmds("(curl -s http://h/sub)"));
+        assertEquals(List.of(List.of("curl", "http://h/a(b)")), cmds("(curl http://h/a(b))"));
+        assertEquals(List.of(List.of("curl", "http://h/a(b)c(d)")), cmds("( curl http://h/a(b)c(d) )"));
+        assertEquals(List.of(List.of("curl", "-H", "X: )", "http://h/")), cmds("(curl -H 'X: )' http://h/)"));
+        assertEquals(List.of(List.of("curl", "http://h/x"), List.of("curl", "http://h/y")),
+                cmds("(curl http://h/x); (curl http://h/y)"));
+        assertEquals(List.of(List.of("curl", "http://h/a)b")), cmds("curl http://h/a)b"));
+    }
+
+    @Test
     void braceGroup() throws Exception {
         assertEquals(List.of(List.of("curl", "http://h/")), cmds("{ curl http://h/; }"));
         assertEquals(List.of(List.of("curl", "http://h/")), cmds("{ curl http://h/ ; }"));
