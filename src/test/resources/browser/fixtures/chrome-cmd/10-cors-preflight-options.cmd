@@ -1,0 +1,11 @@
+curl --url ^"http://__HOSTPORT__/api/v2/users/42^" ^
+  -X ^"OPTIONS^" ^
+  -H ^"accept: */*^" ^
+  -H ^"access-control-request-headers: authorization,content-type^" ^
+  -H ^"access-control-request-method: PUT^" ^
+  -H ^"origin: http://app.example.test^" ^
+  -H ^"referer: http://app.example.test/^" ^
+  -H ^"sec-fetch-dest: empty^" ^
+  -H ^"sec-fetch-mode: cors^" ^
+  -H ^"sec-fetch-site: cross-site^" ^
+  -H ^"user-agent: Mozilla/5.0 ^(Macintosh; Intel Mac OS X 10_15_7^) AppleWebKit/537.36 ^(KHTML, like Gecko^) Chrome/124.0.0.0 Safari/537.36^"

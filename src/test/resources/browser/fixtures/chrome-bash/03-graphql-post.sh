@@ -1,0 +1,17 @@
+curl --url 'http://__HOSTPORT__/graphql' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -b 'session=fake-session-id; csrftoken=fake-csrf-token; theme=dark' \
+  -H 'origin: http://__HOSTPORT__' \
+  -H 'priority: u=1, i' \
+  -H 'referer: http://__HOSTPORT__/app' \
+  -H 'sec-ch-ua: "Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
+  -H 'content-type: application/json' \
+  -H 'x-apollo-operation-name: GetUser' \
+  --data-raw $'{"operationName":"GetUser","variables":{"id":"42","withPosts":true},"query":"query GetUser($id: ID\u0021, $withPosts: Boolean\u0021) {\\n  user(id: $id) {\\n    id\\n    name\\n    posts @include(if: $withPosts) { title }\\n  }\\n}"}'

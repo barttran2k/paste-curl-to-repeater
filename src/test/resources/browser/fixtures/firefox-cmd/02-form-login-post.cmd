@@ -1,0 +1,18 @@
+curl.exe ^"http://__HOSTPORT__/login^" ^
+  -X POST ^
+  -H ^"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0^" ^
+  -H ^"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8^" ^
+  -H ^"Accept-Language: en-US,en;q=0.5^" ^
+  -H ^"Accept-Encoding: gzip, deflate, br, zstd^" ^
+  -H ^"Content-Type: application/x-www-form-urlencoded^" ^
+  -H ^"Origin: http://__HOSTPORT__^" ^
+  -H ^"Connection: keep-alive^" ^
+  -H ^"Referer: http://__HOSTPORT__/login^" ^
+  -H ^"Cookie: csrftoken=fake-csrf-token^" ^
+  -H ^"Upgrade-Insecure-Requests: 1^" ^
+  -H ^"Sec-Fetch-Dest: document^" ^
+  -H ^"Sec-Fetch-Mode: navigate^" ^
+  -H ^"Sec-Fetch-Site: same-origin^" ^
+  -H ^"Sec-Fetch-User: ?1^" ^
+  -H ^"Priority: u=0, i^" ^
+  --data-raw ^"username=alice^&password=s3cret-fake^%^21^&remember=on^&next=^%^2Fdashboard^%^3Ftab^%^3Dsettings^"

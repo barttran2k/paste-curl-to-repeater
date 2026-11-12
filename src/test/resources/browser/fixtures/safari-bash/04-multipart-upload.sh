@@ -1,0 +1,11 @@
+curl 'http://__HOSTPORT__/api/upload' \
+-X 'POST' \
+-H 'Accept: application/json, text/plain, */*' \
+-H 'Accept-Language: en-US,en;q=0.9' \
+-H 'Origin: http://__HOSTPORT__' \
+-H 'Referer: http://__HOSTPORT__/app/upload' \
+-H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15' \
+-H 'Cookie: session=fake-session-id; csrftoken=fake-csrf-token' \
+-H 'Host: __HOSTPORT__' \
+-H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryx2jK9fLq0Zr3TnVb' \
+--data-raw $'------WebKitFormBoundaryx2jK9fLq0Zr3TnVb\r\nContent-Disposition: form-data; name="title"\r\n\r\nQuarterly report\r\n------WebKitFormBoundaryx2jK9fLq0Zr3TnVb\r\nContent-Disposition: form-data; name="file"; filename="report.txt"\r\nContent-Type: text/plain\r\n\r\nline one\r\nline two\r\n------WebKitFormBoundaryx2jK9fLq0Zr3TnVb--\r\n'

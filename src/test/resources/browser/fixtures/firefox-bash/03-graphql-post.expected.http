@@ -1,0 +1,18 @@
+POST /graphql HTTP/1.1
+Host: __HOSTPORT__
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Origin: http://__HOSTPORT__
+Connection: keep-alive
+Referer: http://__HOSTPORT__/app
+Cookie: session=fake-session-id; csrftoken=fake-csrf-token
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+Content-Type: application/json
+Content-Length: 217
+
+{"operationName":"GetUser","variables":{"id":"42","withPosts":true},"query":"query GetUser($id: ID!, $withPosts: Boolean!) {\n  user(id: $id) {\n    id\n    name\n    posts @include(if: $withPosts) { title }\n  }\n}"}

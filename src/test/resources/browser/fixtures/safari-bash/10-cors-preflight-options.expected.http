@@ -1,0 +1,9 @@
+OPTIONS /api/v2/users/42 HTTP/1.1
+Host: __HOSTPORT__
+Accept: */*
+Access-Control-Request-Headers: authorization, content-type
+Access-Control-Request-Method: PUT
+Origin: http://app.example.test
+Referer: http://app.example.test/
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15
+

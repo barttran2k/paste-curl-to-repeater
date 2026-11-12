@@ -42,6 +42,8 @@ public final class PosixTokenizer implements Tokenizer {
         final List<Heredoc> pending = new ArrayList<>();
         final List<Warning> warns = new ArrayList<>();
         final Set<Warning> seen = new HashSet<>();
+        /** Number of subshell groups "(" opened at command position and not yet closed. */
+        int groupDepth;
 
         Run(String raw) {
             StringBuilder sb = new StringBuilder();
@@ -137,11 +139,38 @@ public final class PosixTokenizer implements Tokenizer {
                     }
                     continue;
                 }
+                if (c == '(' && cur.argv.isEmpty()) {
+                    // subshell group "( ... )" at command position: only grouping, not part of a word
+                    i++;
+                    groupDepth++;
+                    continue;
+                }
+                if (c == ')' && groupDepth > 0) {
+                    // closes a subshell group (a ')' glued to a word is handled by readWord)
+                    i++;
+                    groupDepth--;
+                    endCmd();
+                    continue;
+                }
+                if (cur.argv.isEmpty() && (c == '{' || c == '}') && isReservedBrace(i)) {
+                    // brace group "{ cmd; }": the reserved words { and } are not arguments
+                    i++;
+                    continue;
+                }
+                boolean procSubst = (c == '<' || c == '>') && peek(i + 1) == '(';
                 int j = i;
-                while (j < end && s.charAt(j) >= '0' && s.charAt(j) <= '9') j++;
+                while (!procSubst && j < end && s.charAt(j) >= '0' && s.charAt(j) <= '9') j++;
                 if (j > i && j < end && (s.charAt(j) == '>' || s.charAt(j) == '<')) {
                     i = j;
                     c = s.charAt(i);
+                    procSubst = peek(i + 1) == '(';
+                }
+                if (procSubst) {
+                    int before = i;
+                    Token t = readWord();
+                    if (t != null) cur.argv.add(t);
+                    if (i == before) i++;
+                    continue;
                 }
                 if (c == '>') {
                     i++;
@@ -163,6 +192,12 @@ public final class PosixTokenizer implements Tokenizer {
             List<CommandLine> out = new ArrayList<>();
             for (Cmd c : cmds) out.add(new CommandLine(c.argv, c.stdin, c.stdinFile));
             return new TokenizeResult(out, warns);
+        }
+
+        /** True when the { or } at p is a whole word: followed by blank, newline, ; | & ) or the end. */
+        boolean isReservedBrace(int p) {
+            char n = peek(p + 1);
+            return n == 0 || isSpace(n) || n == ';' || n == '|' || n == '&' || n == ')';
         }
 
         void endCmd() {
@@ -372,6 +407,7 @@ public final class PosixTokenizer implements Tokenizer {
             ByteArrayOutputStream b = new ByteArrayOutputStream();
             boolean any = false;
             boolean q = false;
+            int wordParens = 0;
             loop:
             while (i < end) {
                 char c = s.charAt(i);
@@ -381,7 +417,19 @@ public final class PosixTokenizer implements Tokenizer {
                     continue;
                 }
                 switch (c) {
-                    case ' ': case '\t': case '\n': case ' ': case '|': case ';': case '<': case '>':
+                    case ' ': case '\t': case '\n': case ' ': case '|': case ';':
+                        break loop;
+                    case '<': case '>':
+                        if (peek(i + 1) == '(') {
+                            // process substitution <(...) / >(...): kept verbatim like $(...)
+                            int e = scanParen(i + 2, i);
+                            String text = s.substring(i, e);
+                            raw(b, text);
+                            warn(Warning.lossy("Shell expansion is not evaluated and kept as literal text: " + text));
+                            i = e;
+                            any = true;
+                            continue;
+                        }
                         break loop;
                     case '&': {
                         char n = peek(i + 1);
@@ -446,6 +494,19 @@ public final class PosixTokenizer implements Tokenizer {
                     }
                     case '`':
                         expansion(b);
+                        any = true;
+                        continue;
+                    case '(':
+                        wordParens++;
+                        lit(b);
+                        any = true;
+                        continue;
+                    case ')':
+                        if (wordParens == 0 && groupDepth > 0) {
+                            break loop; // closes the enclosing subshell group
+                        }
+                        if (wordParens > 0) wordParens--;
+                        lit(b);
                         any = true;
                         continue;
                     default:

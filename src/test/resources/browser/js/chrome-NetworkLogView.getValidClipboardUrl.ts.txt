@@ -1,0 +1,9 @@
+  static #getValidClipboardUrl(url: Platform.DevToolsPath.UrlString): Platform.DevToolsPath.UrlString|null {
+    // `hasWebSafeScheme` unwraps `blob:` and `filesystem:` URLs to check their inner origin,
+    // but standalone CLI tools (cURL, PowerShell, fetch) cannot request browser-internal URLs.
+    if (Common.ParsedURL.schemeIs(url, 'blob:') || Common.ParsedURL.schemeIs(url, 'filesystem:') ||
+        !Common.ParsedURL.hasWebSafeScheme(url)) {
+      return null;
+    }
+    return url;
+  }

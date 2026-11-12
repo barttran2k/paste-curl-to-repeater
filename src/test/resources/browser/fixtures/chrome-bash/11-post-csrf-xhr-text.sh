@@ -1,0 +1,18 @@
+curl --url 'http://__HOSTPORT__/api/track' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -b 'session=fake-session-id; csrftoken=fake-csrf-token; theme=dark' \
+  -H 'origin: http://__HOSTPORT__' \
+  -H 'priority: u=1, i' \
+  -H 'referer: http://__HOSTPORT__/app/users/42' \
+  -H 'sec-ch-ua: "Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
+  -H 'content-type: application/x-www-form-urlencoded; charset=UTF-8' \
+  -H 'x-csrf-token: fake-csrf-token' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  --data-raw 'event=click&target=%23buy-now&ts=1700000000000'
