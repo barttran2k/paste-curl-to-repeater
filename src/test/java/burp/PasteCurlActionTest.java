@@ -40,7 +40,7 @@ class PasteCurlActionTest {
             public void info(String t, String m) { infos.add(m); events.add("info"); }
             public void error(String t, String m) { errors.add(m); events.add("error"); }
             public void warning(String t, String m) { warnings.add(t + "\n" + m); events.add("warning"); }
-            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f) {
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
                 confirmations.add(f);
                 events.add("confirm");
                 return choice;
@@ -187,7 +187,7 @@ class PasteCurlActionTest {
             public void info(String t, String m) { }
             public void error(String t, String m) { }
             public void warning(String t, String m) { }
-            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f) {
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
                 assertEquals(0, realFilesCreated);
                 assertTrue(filesRead.isEmpty());
                 return PasteCurlAction.FileChoice.CANCEL;
@@ -306,5 +306,33 @@ class PasteCurlActionTest {
         assertTrue(errors.isEmpty(), errors.toString());
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("skipped"), warnings.get(0));
+    }
+
+    @Test
+    void theDialogNamesTheDirectoryOfTheProbeThatResolvesThePaths() {
+        List<String> homes = new ArrayList<>();
+        PasteCurlAction.FileProbe probe = new PasteCurlAction.FileProbe() {
+            public PasteCurlAction.FileInfo describe(String p) {
+                return new PasteCurlAction.FileInfo(p, "/probe-home/" + p, "found, 1 bytes");
+            }
+
+            public String homeDirectory() {
+                return "/probe-home";
+            }
+        };
+        PasteCurlAction a = new PasteCurlAction(() -> "curl https://example.com/ -d @x.json", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { }
+            public void error(String t, String m) { }
+            public void warning(String t, String m) { }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                homes.add(home);
+                return PasteCurlAction.FileChoice.CANCEL;
+            }
+        }, (r, t) -> fail("must not send"), new PasteCurlAction.Log() {
+            public void output(String m) { }
+            public void error(Throwable t) { }
+        }, probe, () -> FileAccess.DENY);
+        a.run();
+        assertEquals(List.of("/probe-home"), homes);
     }
 }

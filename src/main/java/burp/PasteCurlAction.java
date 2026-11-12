@@ -54,6 +54,14 @@ public final class PasteCurlAction {
     public interface FileProbe {
         /** @param path path as written in the command @return facts about it; must not read the content */
         FileInfo describe(String path);
+
+        /**
+         * @return the directory against which {@link #describe} resolves relative paths and {@code ~}, as shown in
+         *         the confirmation dialog; null when the probe has no such notion
+         */
+        default String homeDirectory() {
+            return null;
+        }
     }
 
     /** User-facing dialogs. All calls happen on the thread that calls {@link #run()}. */
@@ -67,8 +75,13 @@ public final class PasteCurlAction {
         /** @param title dialog title @param message text */
         void warning(String title, String message);
 
-        /** @param files every path the command wants to read @return the user's choice */
-        FileChoice confirmFiles(List<FileInfo> files);
+        /**
+         * @param files every path the command wants to read
+         * @param home the directory relative paths are resolved against (from the same probe that produced
+         *             {@code files}), or null
+         * @return the user's choice
+         */
+        FileChoice confirmFiles(List<FileInfo> files, String home);
     }
 
     /** Receives finished requests. */
@@ -152,7 +165,7 @@ public final class PasteCurlAction {
             for (String ref : refs) {
                 infos.add(probe.describe(ref));
             }
-            FileChoice choice = dialogs.confirmFiles(infos);
+            FileChoice choice = dialogs.confirmFiles(infos, probe.homeDirectory());
             if (choice == null || choice == FileChoice.CANCEL) {
                 return;
             }

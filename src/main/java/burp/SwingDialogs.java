@@ -34,9 +34,9 @@ public final class SwingDialogs implements PasteCurlAction.Dialogs {
     }
 
     @Override
-    public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> files) {
+    public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> files, String home) {
         String[] options = {"Read files", "Use placeholders", "Cancel"};
-        int r = JOptionPane.showOptionDialog(parent.get(), scroll(fileConfirmationText(files, new LocalFiles().home().toString())),
+        int r = JOptionPane.showOptionDialog(parent.get(), scroll(fileConfirmationText(files, home)),
                 PasteCurlAction.TITLE + " - local files", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
                 null, options, options[1]);
         return switch (r) {
@@ -48,15 +48,17 @@ public final class SwingDialogs implements PasteCurlAction.Dialogs {
 
     /**
      * @param files the paths
-     * @param home directory used for relative paths
+     * @param home directory used for relative paths (as reported by the probe that resolved them), or null
      * @return the dialog text
      */
     static String fileConfirmationText(List<PasteCurlAction.FileInfo> files, String home) {
         StringBuilder sb = new StringBuilder();
         sb.append("The command reads local files. Burp will read them only if you choose \"Read files\".\n");
         sb.append("\"Use placeholders\" puts <<FILE: path>> into the request instead.\n\n");
-        sb.append("Relative paths are resolved against your home directory (").append(home).append("),\n");
-        sb.append("because curl would use the shell's working directory, which Burp cannot know.\n");
+        if (home != null) {
+            sb.append("Relative paths are resolved against your home directory (").append(home).append("),\n");
+            sb.append("because curl would use the shell's working directory, which Burp cannot know.\n");
+        }
         for (PasteCurlAction.FileInfo f : files) {
             sb.append("\nAs written: ").append(f.written());
             sb.append("\nResolves to: ").append(f.resolved());
