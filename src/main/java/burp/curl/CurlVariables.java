@@ -206,8 +206,8 @@ final class CurlVariables {
                 fromFiles.remove(name);
                 return;
             }
-            warnings.add(Warning.lossy("--variable %" + name + " imports an environment variable; the default value "
-                    + "is used"));
+            warnings.add(Warning.lossy("--variable %" + name + " imports an environment variable; the default "
+                    + "value is used"));
             vars.put(name, content);
             setFromFile(name, file);
             return;

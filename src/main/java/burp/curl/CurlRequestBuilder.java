@@ -411,7 +411,8 @@ final class CurlRequestBuilder {
             try {
                 mb.add(f, access);
             } catch (IOException | RuntimeException e) {
-                w.add(Warning.lossy("The form field '" + ByteText.display(f.name()) + "' could not be built (" + e.getMessage()
+                w.add(Warning.lossy("A form field could not be built ("
+                        + (e instanceof IOException ? e.getMessage() : e.getClass().getSimpleName())
                         + "); it was skipped"));
             }
         }
@@ -651,9 +652,9 @@ final class CurlRequestBuilder {
         }
         Long t = CurlDate.parse(arg);
         if (t == null) {
-            w.add(Warning.lossy("-z '" + op.timeCond + "' is not a date curl understands; curl then treats it as "
-                    + "the name of a file whose modification time is used, or sends no time condition. No "
-                    + "time condition header was added."));
+            w.add(Warning.lossy("The -z argument is not a date curl understands; curl then treats it as the name "
+                    + "of a file whose modification time is used, or sends no time condition. No time condition "
+                    + "header was added."));
             return;
         }
         if (!hasCustom(custom, header)) {
@@ -688,8 +689,7 @@ final class CurlRequestBuilder {
             if (c < 0) {
                 user = op.user;
                 pass = "";
-                w.add(Warning.lossy("-u " + ByteText.display(user) + " has no password; curl would prompt for one, "
-                        + "an empty password is used"));
+                w.add(Warning.lossy("-u has no password; curl would prompt for one, an empty password is used"));
             } else {
                 user = op.user.substring(0, c);
                 pass = op.user.substring(c + 1);

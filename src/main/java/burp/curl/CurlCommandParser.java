@@ -87,7 +87,7 @@ public final class CurlCommandParser {
                 String name = w.substring(2);
                 Optional<CurlOptionTable.LongMatch> m = table.resolveLong(name);
                 if (m.isEmpty()) {
-                    out.warnings.add(Warning.lossy("Unknown option " + w
+                    out.warnings.add(Warning.lossy("Unknown option " + MessageText.optionName(w)
                             + " ignored (treated as taking no argument); the request may differ"));
                     continue;
                 }
@@ -334,7 +334,7 @@ public final class CurlCommandParser {
             current.forms.add(literal ? FormField.parseString(wire(arg)) : FormField.parse(wire(arg)));
         } catch (CurlParseException e) {
             out.warnings.add(Warning.lossy("curl rejects this " + (literal ? "--form-string" : "-F")
-                    + " argument (" + ByteText.display(e.getMessage()) + "); the field was skipped"));
+                    + " argument (" + e.getMessage() + "); the field was skipped"));
         }
     }
 

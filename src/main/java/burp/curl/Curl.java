@@ -32,7 +32,7 @@ public final class Curl {
         } catch (CurlParseException e) {
             throw e;
         } catch (RuntimeException | StackOverflowError e) {
-            throw new CurlParseException("The pasted text could not be parsed (" + e + ")");
+            throw new CurlParseException("The pasted text could not be parsed (" + e.getClass().getSimpleName() + ")");
         }
     }
 

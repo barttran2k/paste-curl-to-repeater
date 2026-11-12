@@ -277,4 +277,34 @@ class PasteCurlActionTest {
         }
         assertTrue(logErr.isEmpty());
     }
+
+    @Test
+    void nothingFromTheCommandReachesTheLogEvenForWarningsAndErrors() {
+        String[] commands = {
+            "curl -F '" + SECRET + "' -u " + SECRET + " -z " + SECRET + " -H '" + SECRET + ": " + SECRET + "' "
+                    + "-d \"$(echo " + SECRET + ")\" https://example.com/ --unknown-x=" + SECRET,
+            "curl https://example.com/ ; curl ftp://" + SECRET + ".example/x",
+            "curl -d '" + SECRET,
+            "curl --digest -u " + SECRET + ":" + SECRET + " --proxy http://" + SECRET + "@p.example:1 https://e.com/",
+        };
+        for (String c : commands) {
+            clipboard = c;
+            action.run();
+        }
+        assertFalse(sent.isEmpty());
+        for (String line : logOut) {
+            assertFalse(line.contains(SECRET), line);
+        }
+        assertTrue(logErr.isEmpty(), logErr.toString());
+    }
+
+    @Test
+    void aBadUrlDoesNotStopTheOtherRequests() {
+        clipboard = "curl https://ok.example/a ; curl ftp://x.example/f";
+        action.run();
+        assertEquals(1, sent.size());
+        assertTrue(errors.isEmpty(), errors.toString());
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("skipped"), warnings.get(0));
+    }
 }

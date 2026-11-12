@@ -301,7 +301,7 @@ public final class PosixTokenizer implements Tokenizer {
         void readBody(Heredoc h) throws CurlParseException {
             StringBuilder raw = new StringBuilder();
             while (true) {
-                if (i >= end) throw err("Unterminated heredoc, missing delimiter line '" + h.delim + "'", h.pos);
+                if (i >= end) throw err("Unterminated heredoc, missing the delimiter line", h.pos);
                 int e = s.indexOf('\n', i);
                 int le = e < 0 ? end : e;
                 String line = s.substring(i, le);
@@ -425,7 +425,8 @@ public final class PosixTokenizer implements Tokenizer {
                             int e = scanParen(i + 2, i);
                             String text = s.substring(i, e);
                             raw(b, text);
-                            warn(Warning.lossy("Shell expansion is not evaluated and kept as literal text: " + text));
+                            warn(Warning.lossy("Shell expansion is not evaluated and kept as literal text: "
+                                    + MessageText.shellExpansion(text)));
                             i = e;
                             any = true;
                             continue;
@@ -542,7 +543,8 @@ public final class PosixTokenizer implements Tokenizer {
             }
             String text = s.substring(i, e);
             raw(b, text);
-            warn(Warning.lossy("Shell expansion is not evaluated and kept as literal text: " + text));
+            warn(Warning.lossy("Shell expansion is not evaluated and kept as literal text: "
+                                    + MessageText.shellExpansion(text)));
             i = e;
         }
 

@@ -78,7 +78,7 @@ public record FormField(String name, Kind kind, String value, String type, Strin
     public static FormField parse(String arg) throws CurlParseException {
         int eq = arg.indexOf('=');
         if (eq < 0) {
-            throw new CurlParseException("-F: expected name=content, got '" + arg + "'");
+            throw new CurlParseException("-F: expected name=content");
         }
         String name = arg.substring(0, eq);
         String content = arg.substring(eq + 1);
@@ -107,7 +107,7 @@ public record FormField(String name, Kind kind, String value, String type, Strin
     public static FormField parseString(String arg) throws CurlParseException {
         int eq = arg.indexOf('=');
         if (eq < 0) {
-            throw new CurlParseException("--form-string: expected name=content, got '" + arg + "'");
+            throw new CurlParseException("--form-string: expected name=content");
         }
         return new FormField(arg.substring(0, eq), Kind.LITERAL, arg.substring(eq + 1), null, null, List.of());
     }
@@ -320,7 +320,7 @@ public record FormField(String name, Kind kind, String value, String type, Strin
                     ok = m > m0;
                 }
                 if (!ok) {
-                    throw new CurlParseException("illegally formatted content-type field in '" + s + "'");
+                    throw new CurlParseException("illegally formatted content-type field");
                 }
                 int end = scanSegmentEnd(s, t, endchar);
                 r.type = trimEnd(s.substring(t, end));

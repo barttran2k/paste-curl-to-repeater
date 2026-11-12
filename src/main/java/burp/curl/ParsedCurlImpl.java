@@ -78,7 +78,7 @@ final class ParsedCurlImpl implements ParsedCurl {
         } catch (CurlParseException e) {
             throw e;
         } catch (RuntimeException | StackOverflowError e) {
-            throw new CurlParseException("The curl command could not be built (" + e + ")");
+            throw new CurlParseException("The curl command could not be built (" + e.getClass().getSimpleName() + ")");
         }
     }
 
