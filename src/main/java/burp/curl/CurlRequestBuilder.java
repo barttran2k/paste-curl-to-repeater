@@ -49,8 +49,10 @@ final class CurlRequestBuilder {
 
     /** What a request carries as its body, before the headers are written. */
     private static final class Body {
-        /** bytes as sent on the wire (already chunk-encoded when {@code chunked}) */
+        /** bytes as sent on the wire (for a chunked body set once the header block is known) */
         byte[] wire;
+        /** the content after line-end conversion, before chunk encoding */
+        byte[] converted;
         /** the content before chunk encoding and line-end conversion (what the legacy facade shows) */
         byte[] content;
         boolean chunked;
@@ -144,7 +146,7 @@ final class CurlRequestBuilder {
                 method = "POST";
             } else if (dataBody != null) {
                 if (op.get) {
-                    url = url.withAppendedQuery(new String(dataBody, StandardCharsets.UTF_8));
+                    url = appendQuery(url, new String(dataBody, StandardCharsets.UTF_8), w);
                 } else {
                     body = new Body();
                     body.content = dataBody;
@@ -174,9 +176,15 @@ final class CurlRequestBuilder {
                 body = new Body();
                 body.content = new byte[0];
                 body.chunked = true;
-                body.wire = chunkEncode(new byte[0]);
+                body.converted = new byte[0];
             }
             byte[] head = headerBlock(op, url, custom, method, body, jar, now, w);
+            if (body != null && body.chunked) {
+                // measured: when the request head travels together with the body the first chunk is smaller by
+                // the size of the head (the send buffer is 64 KiB); after an Expect: 100-continue it is not
+                int first = sendsExpect(op, custom, body) ? CHUNK_MAX : CHUNK_MAX - head.length;
+                body.wire = chunkEncode(body.converted, first > 0 ? first : CHUNK_MAX);
+            }
             byte[] raw = head;
             if (body != null) {
                 raw = new byte[head.length + body.wire.length];
@@ -186,7 +194,7 @@ final class CurlRequestBuilder {
             int explicit = url.port() != (url.secure() ? 443 : 80) ? url.port() : -1;
             BuiltRequest br = new BuiltRequest(url.host(), url.port(), url.secure(), raw, method, url.toString(), w);
             result.add(new RequestDetails(br, url.scheme(), url.host(), explicit, url.path(), url.query(),
-                    typed, body != null && !body.chunked ? body.content : body != null ? body.content : new byte[0]));
+                    typed, body != null ? body.content : new byte[0]));
         }
     }
 
@@ -206,8 +214,9 @@ final class CurlRequestBuilder {
         if (op.crlf) {
             bytes = crlf(bytes);
         }
+        b.converted = bytes;
         b.chunked = customChunked || b.unknownSize || op.crlf;
-        b.wire = b.chunked ? chunkEncode(bytes) : bytes;
+        b.wire = b.chunked ? null : bytes;
     }
 
     /**
@@ -234,11 +243,13 @@ final class CurlRequestBuilder {
         return o.toByteArray();
     }
 
-    private static byte[] chunkEncode(byte[] data) {
+    private static byte[] chunkEncode(byte[] data, int firstMax) {
         ByteArrayOutputStream o = new ByteArrayOutputStream(data.length + 32);
         int off = 0;
+        int max = firstMax;
         while (off < data.length) {
-            int n = Math.min(CHUNK_MAX, data.length - off);
+            int n = Math.min(max, data.length - off);
+            max = CHUNK_MAX;
             o.writeBytes((Integer.toHexString(n) + "\r\n").getBytes(StandardCharsets.US_ASCII));
             o.write(data, off, n);
             o.writeBytes("\r\n".getBytes(StandardCharsets.US_ASCII));
@@ -340,7 +351,32 @@ final class CurlRequestBuilder {
             }
             joined.writeBytes(ok ? urlencode(content) : content);
         }
-        return url.withAppendedQuery(new String(joined.toByteArray(), StandardCharsets.UTF_8));
+        return appendQuery(url, new String(joined.toByteArray(), StandardCharsets.UTF_8), w);
+    }
+
+    /**
+     * Appends query text to the URL. curl 8.7.1 refuses a query with control characters (exit 3, measured); here
+     * they are percent-encoded so that a usable request is still built, and a warning says so.
+     */
+    private static CurlUrl appendQuery(CurlUrl url, String piece, List<Warning> w) {
+        StringBuilder sb = null;
+        for (int i = 0; i < piece.length(); i++) {
+            char c = piece.charAt(i);
+            if (c < 0x20 || c == 0x7f) {
+                if (sb == null) {
+                    sb = new StringBuilder(piece.length() + 8).append(piece, 0, i);
+                }
+                sb.append('%').append(HEX_UPPER[c >> 4]).append(HEX_UPPER[c & 15]);
+            } else if (sb != null) {
+                sb.append(c);
+            }
+        }
+        if (sb == null) {
+            return url.withAppendedQuery(piece);
+        }
+        w.add(Warning.lossy("curl refuses a query that contains control characters (URL rejected); they are "
+                + "percent-encoded here"));
+        return url.withAppendedQuery(sb.toString());
     }
 
     // ---- forms ----
@@ -564,13 +600,18 @@ final class CurlRequestBuilder {
             if (body.contentType != null && (body.dropCustomContentType || !hasCustom(custom, "Content-Type"))) {
                 sb.append("Content-Type: ").append(body.contentType).append("\r\n");
             }
-            if (!op.http10 && !hasCustom(custom, "Expect")
-                    && (body.unknownSize || body.knownSize > EXPECT_THRESHOLD)) {
+            if (sendsExpect(op, custom, body)) {
                 sb.append("Expect: 100-continue\r\n");
             }
         }
         sb.append("\r\n");
         return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** curl adds {@code Expect: 100-continue} for HTTP/1.1 bodies of unknown size or above 1 MiB. */
+    private static boolean sendsExpect(Operation op, List<String> custom, Body body) {
+        return body != null && !op.http10 && !hasCustom(custom, "Expect")
+                && (body.unknownSize || body.knownSize > EXPECT_THRESHOLD);
     }
 
     /** Jar cookies first (longest path first), then the {@code -b name=value} strings. */

@@ -206,10 +206,22 @@ class CurlFuzzTest {
         };
     }
 
+    /**
+     * The request starts with a request line ({@code METHOD SP target SP HTTP/1.x CRLF}) and has a blank line.
+     * Real curl copies CR/LF in {@code -X} and {@code --request-target} verbatim (measured), so those two are
+     * exempt from the single-line requirement; headers and URLs never touch the request line.
+     */
     private static void checkWellFormed(BuiltRequest b, String input) {
         String raw = new String(b.raw(), StandardCharsets.ISO_8859_1);
-        String start = new String((b.method() + " ").getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1);
-        assertTrue(raw.startsWith(start), "request line: " + shorten(raw) + "\n" + input);
+        int eol = raw.indexOf("\r\n");
+        assertTrue(eol > 0, "no CRLF: " + shorten(raw) + "\n" + input);
+        String first = raw.substring(0, eol);
+        boolean exempt = b.method().contains("\r") || b.method().contains("\n") || input.contains("request-");
+        if (!exempt) {
+            assertTrue(first.matches("[^\\r\\n]+ HTTP/1\\.[01]"), "request line: " + shorten(first) + "\n" + input);
+            assertTrue(first.startsWith(new String((b.method() + " ").getBytes(StandardCharsets.UTF_8),
+                    StandardCharsets.ISO_8859_1)), "method: " + shorten(first) + "\n" + input);
+        }
         assertTrue(raw.contains(" HTTP/1."), "version: " + shorten(raw) + "\n" + input);
         assertTrue(raw.contains("\r\n\r\n"), "CRLFCRLF: " + shorten(raw) + "\n" + input);
     }

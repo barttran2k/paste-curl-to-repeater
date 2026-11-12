@@ -129,6 +129,36 @@ class CurlExtendedBuilderTest {
     }
 
     @Test
+    void knownSizeChunkedBodiesLoseTheHeadSizeInTheFirstChunk() throws Exception {
+        // measured on 8.7.1: with the head 107 bytes long the chunks of a 300000 byte upload were
+        // 65417, 65524, 65524, 65524, 38011
+        FileAccess f = files(Map.of("big", "a".repeat(300_000)));
+        String r = raw(one("curl -H 'Transfer-Encoding: chunked' -T big http://127.0.0.1:18999/x", f));
+        int headLen = r.indexOf("\r\n\r\n") + 4;
+        assertEquals(107, headLen);
+        String body = r.substring(headLen);
+        StringBuilder sizes = new StringBuilder();
+        int i = 0;
+        while (i < body.length()) {
+            int j = body.indexOf("\r\n", i);
+            int n = Integer.parseInt(body.substring(i, j), 16);
+            sizes.append(n).append(',');
+            i = j + 2 + n + 2;
+        }
+        assertEquals("65417,65524,65524,65524,38011,0,", sizes.toString());
+    }
+
+    @Test
+    void controlCharactersInAppendedQueriesAreEncodedWithAWarning() throws Exception {
+        // measured: curl 8.7.1 exits with 3 (URL rejected) for -G --data-binary $'a\nb' and --url-query $'+a\tc'
+        BuiltRequest b = one("curl -G --data-binary $'a\nb' http://h/x", FileAccess.DENY);
+        assertTrue(raw(b).startsWith("GET /x?a%0ab HTTP/1.1\r\n"), raw(b));
+        assertTrue(lossy(b, "control characters"));
+        b = one("curl --url-query $'+a\tc' http://h/x", FileAccess.DENY);
+        assertTrue(raw(b).startsWith("GET /x?a%09c HTTP/1.1\r\n"), raw(b));
+    }
+
+    @Test
     void customTransferEncodingChunkedChunksAnyBody() throws Exception {
         // measured on 8.7.1
         assertEquals("GET /x HTTP/1.1\r\nHost: h\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n"
