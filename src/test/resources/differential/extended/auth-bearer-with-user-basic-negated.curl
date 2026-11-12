@@ -1,0 +1,1 @@
+curl __BASE__/ -u user:pw --oauth2-bearer tok --basic --no-basic

@@ -76,7 +76,22 @@ public final class Operation {
     final List<String> cookies = new ArrayList<>();
     String user;
     String bearer;
-    boolean basic;
+    /**
+     * The authentication methods curl is asked for, as curl's {@code CURLOPT_HTTPAUTH} bit mask (0 = never set,
+     * which means Basic). {@code -u}/URL credentials and {@code --oauth2-bearer} are sent on the first request only
+     * when the mask selects exactly that one method (Basic: 0 or {@link #AUTH_BASIC}); with several methods curl
+     * waits for a challenge, and Digest, NTLM and Negotiate need one. Measured with curl 8.7.1.
+     */
+    int authMask;
+    /** the authentication options given, for messages */
+    final java.util.Set<String> authOptions = new java.util.LinkedHashSet<>();
+    static final int AUTH_BASIC = 1;
+    static final int AUTH_DIGEST = 2;
+    static final int AUTH_NTLM = 4;
+    static final int AUTH_NEGOTIATE = 8;
+    static final int AUTH_NTLM_WB = 16;
+    static final int AUTH_BEARER = 32;
+    static final int AUTH_ANY = 63;
     String range;
     boolean compressed;
 

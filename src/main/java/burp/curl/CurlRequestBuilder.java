@@ -671,9 +671,21 @@ final class CurlRequestBuilder {
     }
 
     private static String authorization(Operation op, CurlUrl url, List<Warning> w) {
+        int mask = op.authMask;
+        boolean wantsBasic = mask == 0 || mask == Operation.AUTH_BASIC;
+        boolean wantsBearer = op.bearer != null && mask == Operation.AUTH_BEARER;
         if (op.bearer != null) {
-            // with an explicit --basic curl sends neither (measured on 8.7.1)
-            return op.basic ? null : "Bearer " + op.bearer;
+            if (wantsBearer) {
+                return "Bearer " + op.bearer;
+            }
+            suppressed(op, w);
+            return null;
+        }
+        if (!wantsBasic) {
+            if ((op.user != null && !op.user.isEmpty()) || url.user() != null) {
+                suppressed(op, w);
+            }
+            return null;
         }
         String user;
         String pass;
@@ -698,6 +710,12 @@ final class CurlRequestBuilder {
             return null;
         }
         return "Basic " + Base64.getEncoder().encodeToString(ByteText.encode(user + ":" + pass));
+    }
+
+    /** curl waits for a challenge with this mix of methods, and a challenge/response handshake is not reproduced. */
+    private static void suppressed(Operation op, List<Warning> w) {
+        w.add(Warning.lossy("curl sends no Authorization header on the first request with " + String.join(" ",
+                op.authOptions) + " (the credentials are not sent as Basic or Bearer); none is added here"));
     }
 
     // ---- body ----

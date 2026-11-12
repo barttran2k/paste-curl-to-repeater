@@ -69,7 +69,7 @@ class OptionWarningsTest {
         for (String o : List.of("--digest", "--ntlm", "--ntlm-wb", "--negotiate", "--anyauth")) {
             String m = only(o + " -u a:topsecret");
             assertTrue(m.startsWith(o + ":"), m);
-            assertTrue(m.contains("not precomputed") && m.contains("no Authorization header is added")
+            assertTrue(m.contains("not precomputed") && m.contains("itself adds no Authorization header")
                     && m.contains("platform authentication in Burp"), m);
             assertFalse(m.contains("topsecret"), m);
         }
