@@ -27,6 +27,8 @@ public final class PasteCurlAction {
     public static final int MAX_TABS = 20;
     /** Maximum number of LOSSY warnings listed in the dialog. */
     public static final int MAX_LISTED_WARNINGS = 15;
+    /** Largest clipboard text (in characters) that is parsed; anything bigger is refused before parsing. */
+    public static final int MAX_CLIPBOARD_CHARS = 10 * 1024 * 1024;
     /** Characters of pasted text shown on each side of a parse error position. */
     static final int EXCERPT_RADIUS = 30;
 
@@ -154,6 +156,14 @@ public final class PasteCurlAction {
         String text = clipboard.text();
         if (text == null || text.isBlank()) {
             dialogs.info(TITLE, "The clipboard does not contain any text. Copy a cURL command first.");
+            return;
+        }
+
+        if (text.length() > MAX_CLIPBOARD_CHARS) {
+            dialogs.error(TITLE + " - text too large",
+                    "The clipboard text is too large (" + text.length() + " characters; the limit is "
+                            + MAX_CLIPBOARD_CHARS + ", about 10 MB). Nothing was parsed and no request was sent.\n"
+                            + "Copy only the curl command, and put a large body in a file (-d @file).");
             return;
         }
 

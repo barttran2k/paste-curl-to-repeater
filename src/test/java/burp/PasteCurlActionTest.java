@@ -410,4 +410,24 @@ class PasteCurlActionTest {
         assertTrue(raw(out.get(0)).contains("<<FILE: ~/body.json>>"), raw(out.get(0)));
         assertEquals(1, warn.size());
     }
+
+    @Test
+    void clipboardTextOverTheLimitIsRefusedBeforeParsing() {
+        assertEquals(10 * 1024 * 1024, PasteCurlAction.MAX_CLIPBOARD_CHARS);
+        clipboard = "curl https://example.com/ -d '" + "x".repeat(PasteCurlAction.MAX_CLIPBOARD_CHARS) + "'";
+        action.run();
+        assertTrue(sent.isEmpty());
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).contains("too large"), errors.get(0));
+        assertFalse(errors.get(0).contains("xxxxxxxx"));
+    }
+
+    @Test
+    void clipboardTextAtTheLimitIsStillParsed() {
+        String head = "curl https://example.com/ -d '";
+        clipboard = head + "x".repeat(PasteCurlAction.MAX_CLIPBOARD_CHARS - head.length() - 1) + "'";
+        assertEquals(PasteCurlAction.MAX_CLIPBOARD_CHARS, clipboard.length());
+        action.run();
+        assertEquals(1, sent.size(), errors.toString());
+    }
 }
