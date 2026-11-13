@@ -1,39 +1,38 @@
 package burp.curl;
 
-import java.util.regex.Pattern;
-
 /**
  * Settings the caller injects into request building; nothing here is read from the machine by the core.
  *
- * @param curlVersion the version that appears in the default {@code User-Agent: curl/<version>}
- * @param versionSource why that version was chosen (shown as a note on requests that got the default User-Agent),
- *                      or null for no note
+ * @param defaultUserAgent the value of the {@code User-Agent} header of a request whose command sets none
+ *                         (printable ASCII only; anything else is replaced by {@link #DEFAULT_USER_AGENT})
+ * @param note a note added to every request that received that default, or null for none
  */
-public record CurlSettings(String curlVersion, String versionSource) {
-    /** What a version looks like: {@code 8.7.1}, {@code 8.12.0-DEV}, {@code 7.81.0}. */
-    private static final Pattern VERSION = Pattern.compile("\\d+\\.\\d+(\\.\\d+)?([-+~.][A-Za-z0-9._+~-]{0,30})?");
+public record CurlSettings(String defaultUserAgent, String note) {
+    /** What curl 8.7.1 sends; the only place this value is defined. */
+    public static final String DEFAULT_USER_AGENT = "curl/8.7.1";
 
-    /** The built-in default curl version; the only place it is defined. */
-    public static final String DEFAULT_CURL_VERSION = "8.7.1";
+    /** The curl value, no note. This is what callers that set nothing get. */
+    public static final CurlSettings DEFAULTS = new CurlSettings(DEFAULT_USER_AGENT, null);
 
-    /** Built-in default, no note. This is what callers that set nothing get. */
-    public static final CurlSettings DEFAULTS = new CurlSettings(DEFAULT_CURL_VERSION, null);
-
-    /** Normalises: an unusable version (empty, odd characters) becomes the built-in default. */
+    /** Normalises: an unusable value (null, empty, control or non-ASCII characters) becomes the curl value. */
     public CurlSettings {
-        if (curlVersion == null || !VERSION.matcher(curlVersion).matches()) {
-            curlVersion = DEFAULT_CURL_VERSION;
-            versionSource = versionSource == null ? null : "built-in default, the detected version was unusable";
+        if (!isUsableUserAgent(defaultUserAgent)) {
+            defaultUserAgent = DEFAULT_USER_AGENT;
+            note = null;
         }
     }
 
-    /** @param version a version string as {@code curl --version} prints it @return true if it is usable */
-    public static boolean isUsableVersion(String version) {
-        return version != null && VERSION.matcher(version).matches();
-    }
-
-    /** @return the value of the default User-Agent header */
-    public String defaultUserAgent() {
-        return "curl/" + curlVersion;
+    /** @param ua a candidate value @return true if it can be written into a header line as is */
+    public static boolean isUsableUserAgent(String ua) {
+        if (ua == null || ua.isBlank() || ua.length() > 512) {
+            return false;
+        }
+        for (int i = 0; i < ua.length(); i++) {
+            char c = ua.charAt(i);
+            if (c < 0x20 || c > 0x7e) {
+                return false;
+            }
+        }
+        return true;
     }
 }

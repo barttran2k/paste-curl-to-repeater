@@ -421,7 +421,7 @@ class PasteCurlActionTest {
     }
 
     @Test
-    void theSuppliedSettingsDecideTheDefaultUserAgentAndTheNoteGoesOnlyToTheLog() {
+    void theSuppliedBrowserUserAgentIsSentAndTheNoteGoesOnlyToTheLog() {
         PasteCurlAction a = new PasteCurlAction(() -> "curl https://t.example/", new PasteCurlAction.Dialogs() {
             public void info(String t, String m) { infos.add(m); }
             public void error(String t, String m) { errors.add(m); }
@@ -433,11 +433,16 @@ class PasteCurlActionTest {
             public void output(String m) { logOut.add(m); }
             public void error(Throwable t) { logErr.add(t); }
         }, p -> new PasteCurlAction.FileInfo(p, p, "x"), () -> FileAccess.DENY,
-                () -> new burp.curl.CurlSettings("8.12.0-DEV", "version of the curl found at /usr/bin/curl"));
+                () -> new burp.curl.CurlSettings(BrowserUserAgent.userAgent(BrowserUserAgent.Os.LINUX, 142),
+                        "User-Agent set to a browser value (Chrome 142, version of the installed Chrome); curl itself would send its own curl/x.y.z"));
         a.run();
         assertEquals(1, sent.size());
-        assertTrue(raw(sent.get(0)).contains("User-Agent: curl/8.12.0-DEV\r\n"));
-        assertTrue(logOut.contains("NOTE: User-Agent curl/8.12.0-DEV: version of the curl found at /usr/bin/curl"), logOut.toString());
+        assertTrue(raw(sent.get(0)).contains("User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\r\nAccept: */*\r\n"), raw(sent.get(0)));
+        assertTrue(logOut.contains("NOTE: User-Agent set to a browser value (Chrome 142, version of the installed "
+                + "Chrome); curl itself would send its own curl/x.y.z"), logOut.toString());
+        // the core default is untouched
+        assertEquals("curl/8.7.1", burp.curl.CurlSettings.DEFAULT_USER_AGENT);
         assertTrue(warnings.isEmpty() && errors.isEmpty() && infos.isEmpty());
     }
 

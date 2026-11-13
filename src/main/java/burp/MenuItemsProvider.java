@@ -16,7 +16,7 @@ import java.util.List;
 public class MenuItemsProvider implements ContextMenuItemsProvider {
 
     private MontoyaApi api;
-    private CurlVersionDetector curlVersion;
+    private BrowserUserAgent browserUserAgent;
 
     public MenuItemsProvider() {
         //noop
@@ -26,10 +26,10 @@ public class MenuItemsProvider implements ContextMenuItemsProvider {
         this.api = api;
     }
 
-    /** @param curlVersion supplies the default User-Agent version (detected in the background) */
-    public MenuItemsProvider(MontoyaApi api, CurlVersionDetector curlVersion) {
+    /** @param browserUserAgent supplies the default User-Agent (detected in the background) */
+    public MenuItemsProvider(MontoyaApi api, BrowserUserAgent browserUserAgent) {
         this.api = api;
-        this.curlVersion = curlVersion;
+        this.browserUserAgent = browserUserAgent;
     }
 
     @Override
@@ -62,7 +62,7 @@ public class MenuItemsProvider implements ContextMenuItemsProvider {
                 },
                 files,
                 () -> files,
-                () -> curlVersion == null ? burp.curl.CurlSettings.DEFAULTS : curlVersion.settings());
+                () -> browserUserAgent == null ? burp.curl.CurlSettings.DEFAULTS : browserUserAgent.settings());
     }
 
     /** @return the clipboard text, or null when the clipboard holds no text */

@@ -21,7 +21,7 @@ public interface ParsedCurl {
 
     /**
      * @param files access to local files
-     * @param settings injected settings (the default User-Agent version)
+     * @param settings injected settings (the default User-Agent)
      * @return the finished requests
      * @throws CurlParseException if a request cannot be built
      */

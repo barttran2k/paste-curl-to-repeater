@@ -135,7 +135,7 @@ public final class PasteCurlAction {
      * @param log log
      * @param probe path inspector for the confirmation dialog
      * @param realFiles factory of the FileAccess used after the user chose "Read files"
-     * @param settings supplies the build settings (default User-Agent version); called once per paste, must not
+     * @param settings supplies the build settings (default User-Agent); called once per paste, must not
      *                 block for long
      */
     public PasteCurlAction(ClipboardSource clipboard, Dialogs dialogs, RequestSink sink, Log log,

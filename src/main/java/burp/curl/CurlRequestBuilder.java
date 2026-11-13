@@ -539,8 +539,8 @@ final class CurlRequestBuilder {
         if (!hasCustom(custom, "User-Agent")) {
             if (op.userAgent == null) {
                 sb.append("User-Agent: ").append(settings.defaultUserAgent()).append("\r\n");
-                if (settings.versionSource() != null) {
-                    w.add(Warning.note("User-Agent " + settings.defaultUserAgent() + ": " + settings.versionSource()));
+                if (settings.note() != null) {
+                    w.add(Warning.note(settings.note()));
                 }
             } else if (!op.userAgent.isEmpty()) {
                 sb.append("User-Agent: ").append(op.userAgent).append("\r\n");

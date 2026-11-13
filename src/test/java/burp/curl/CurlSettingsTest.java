@@ -13,68 +13,67 @@ class CurlSettingsTest {
     }
 
     static boolean hasUserAgentNote(BuiltRequest r) {
-        return r.warnings().stream().anyMatch(w -> w.message().startsWith("User-Agent curl/"));
+        return r.warnings().stream().anyMatch(w -> w.message().startsWith("User-Agent"));
+    }
+
+    static final String CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+            + "Chrome/156.0.0.0 Safari/537.36";
+    static final CurlSettings BROWSER = new CurlSettings(CHROME, "User-Agent set to a browser value (test)");
+
+    static boolean hasNote(BuiltRequest r) {
+        return r.warnings().stream().anyMatch(w -> w.message().equals("User-Agent set to a browser value (test)"));
     }
 
     @Test
-    void withoutSettingsTheBuiltInDefaultIsUsedAndNoNoteIsAdded() throws Exception {
+    void withoutSettingsTheCurlValueIsUsedAndNoNoteIsAdded() throws Exception {
         BuiltRequest r = Curl.parse("curl https://t.example/").build(FileAccess.DENY).get(0);
         assertTrue(raw(r).contains("\r\nUser-Agent: curl/8.7.1\r\n"));
-        assertEquals("8.7.1", CurlSettings.DEFAULT_CURL_VERSION);
+        assertEquals("curl/8.7.1", CurlSettings.DEFAULT_USER_AGENT);
         assertFalse(hasUserAgentNote(r));
         assertEquals(raw(r), raw(Curl.parse("curl https://t.example/").build(FileAccess.DENY, CurlSettings.DEFAULTS).get(0)));
     }
 
     @Test
-    void theInjectedVersionChangesTheRequestAndAddsANote() throws Exception {
-        CurlSettings s = new CurlSettings("8.12.0-DEV", "version of the curl found at /usr/bin/curl");
-        BuiltRequest r = Curl.parse("curl https://t.example/").build(FileAccess.DENY, s).get(0);
-        assertTrue(raw(r).contains("\r\nUser-Agent: curl/8.12.0-DEV\r\n"), raw(r));
-        List<Warning> notes = r.warnings().stream().filter(w -> w.message().startsWith("User-Agent")).toList();
-        assertEquals(1, notes.size());
-        assertEquals(Warning.Severity.NOTE, notes.get(0).severity());
-        assertEquals("User-Agent curl/8.12.0-DEV: version of the curl found at /usr/bin/curl", notes.get(0).message());
+    void theInjectedValueChangesTheRequestAndAddsTheNote() throws Exception {
+        BuiltRequest r = Curl.parse("curl https://t.example/").build(FileAccess.DENY, BROWSER).get(0);
+        assertTrue(raw(r).contains("\r\nUser-Agent: " + CHROME + "\r\nAccept: */*\r\n"), raw(r));
+        assertEquals(1, r.warnings().stream().filter(w -> w.message().startsWith("User-Agent")).count());
+        assertTrue(hasNote(r));
+        assertEquals(Warning.Severity.NOTE, r.warnings().stream().filter(w -> w.message().startsWith("User-Agent"))
+                .findFirst().get().severity());
     }
 
     @Test
-    void theBuiltInReasonIsShown() throws Exception {
-        CurlSettings s = new CurlSettings(CurlSettings.DEFAULT_CURL_VERSION, "built-in default, no curl binary was found");
-        BuiltRequest r = Curl.parse("curl https://t.example/").build(FileAccess.DENY, s).get(0);
-        assertTrue(r.warnings().stream().anyMatch(w -> w.message()
-                .equals("User-Agent curl/8.7.1: built-in default, no curl binary was found")));
-    }
-
-    @Test
-    void noNoteAndNoDefaultWhenTheUserAgentIsSetExplicitly() throws Exception {
-        CurlSettings s = new CurlSettings("9.9.9", "src");
+    void nothingChangesWhenTheCommandSetsOrRemovesTheUserAgent() throws Exception {
         for (String cmd : new String[] {"curl -A mine https://t.example/", "curl -H 'User-Agent: mine' https://t.example/",
                 "curl -H 'user-agent: mine' https://t.example/", "curl -A '' https://t.example/",
                 "curl -H 'User-Agent:' https://t.example/"}) {
-            BuiltRequest r = Curl.parse(cmd).build(FileAccess.DENY, s).get(0);
-            assertFalse(hasUserAgentNote(r), cmd);
-            assertFalse(raw(r).contains("curl/9.9.9"), cmd);
-            assertFalse(raw(r).contains("curl/8.7.1"), cmd);
+            BuiltRequest withBrowser = Curl.parse(cmd).build(FileAccess.DENY, BROWSER).get(0);
+            BuiltRequest plain = Curl.parse(cmd).build(FileAccess.DENY).get(0);
+            assertEquals(raw(plain), raw(withBrowser), cmd);
+            assertFalse(hasNote(withBrowser), cmd);
+            assertFalse(raw(withBrowser).contains("Chrome/"), cmd);
         }
     }
 
     @Test
-    void everyRequestOfACommandGetsTheNote() throws Exception {
-        CurlSettings s = new CurlSettings("9.9.9", "src");
+    void everyRequestWithoutAUserAgentGetsTheNote() throws Exception {
         List<BuiltRequest> rs = Curl.parse("curl https://a.example/ https://b.example/ --next -A x https://c.example/")
-                .build(FileAccess.DENY, s);
+                .build(FileAccess.DENY, BROWSER);
         assertEquals(3, rs.size());
-        assertTrue(hasUserAgentNote(rs.get(0)));
-        assertTrue(hasUserAgentNote(rs.get(1)));
-        assertFalse(hasUserAgentNote(rs.get(2)));
+        assertTrue(hasNote(rs.get(0)));
+        assertTrue(hasNote(rs.get(1)));
+        assertFalse(hasNote(rs.get(2)));
     }
 
     @Test
-    void anUnusableVersionFallsBackToTheBuiltInDefault() throws Exception {
-        CurlSettings s = new CurlSettings("8.7.1\r\nEvil: 1", "src");
-        BuiltRequest r = Curl.parse("curl https://t.example/").build(FileAccess.DENY, s).get(0);
-        assertTrue(raw(r).contains("\r\nUser-Agent: curl/8.7.1\r\n"));
-        assertFalse(raw(r).contains("Evil"));
-        assertTrue(r.warnings().stream().anyMatch(w -> w.message().startsWith("User-Agent curl/8.7.1: built-in default")));
+    void anUnusableValueFallsBackToTheCurlValueWithoutANote() throws Exception {
+        for (String bad : new String[] {"x\r\nEvil: 1", "", null, "caf\u00e9"}) {
+            BuiltRequest r = Curl.parse("curl https://t.example/").build(FileAccess.DENY, new CurlSettings(bad, "n")).get(0);
+            assertTrue(raw(r).contains("\r\nUser-Agent: curl/8.7.1\r\n"));
+            assertFalse(raw(r).contains("Evil"));
+            assertTrue(r.warnings().stream().noneMatch(w -> w.message().equals("n")));
+        }
     }
 
     @Test

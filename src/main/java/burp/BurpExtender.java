@@ -23,9 +23,9 @@ public class BurpExtender implements BurpExtension {
         // set extension name
         api.extension().setName(EXTENSION_NAME);
 
-        // runs "curl --version" once, off the event thread, for the default User-Agent
-        CurlVersionDetector curlVersion = new CurlVersionDetector().startInBackground();
-        api.userInterface().registerContextMenuItemsProvider(new MenuItemsProvider(api, curlVersion));
+        // finds the installed Chrome's version once, off the event thread, for the default User-Agent
+        BrowserUserAgent browserUserAgent = BrowserUserAgent.forThisMachine().startInBackground();
+        api.userInterface().registerContextMenuItemsProvider(new MenuItemsProvider(api, browserUserAgent));
 
         instance = this;
     }

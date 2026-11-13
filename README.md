@@ -28,12 +28,15 @@ A new Repeater tab opens with the request, sent to the host, port and scheme nam
   (only whitespace, quotes, backslashes, `$` and curl option names are shown; every other character is `·`), so that
   tokens and passwords in the command never appear in the dialog.
 - Clipboard text over 10 MB (10 * 1024 * 1024 characters) is refused before parsing.
-- Without `-A` or a `User-Agent` header the request carries `User-Agent: curl/<version>`. The version is the one of the
-  curl installed on your machine: the extension runs `curl --version` once when it loads (fixed arguments, no shell,
-  3 seconds at most, in a background thread), looking for `curl` on the PATH and then in `/usr/bin`,
-  `/opt/homebrew/bin`, `/usr/local/bin` and `%SystemRoot%\System32`. If none is found or the output is not usable,
-  the built-in default `8.7.1` is used. A note in the Output tab says which value was used and why. A paste made
-  before the lookup has finished uses the built-in default.
+- A command without a User-Agent (no `-A`, no `User-Agent` header) gets a current desktop Chrome User-Agent for the
+  local operating system, in Chrome's reduced format (for example `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+  AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36`). This intentionally differs from what curl
+  would send (`curl/x.y.z`); a note in the Output tab says so and where the version came from. The Chrome major
+  version is read from the installed Chrome (macOS `Info.plist`, Windows version directory under Program Files or
+  LocalAppData; on Linux `google-chrome --version` or `chromium --version` is run once), otherwise it is estimated
+  from the date using Chrome's release schedule. This lookup runs once, in a background thread, when the extension
+  loads; a paste before it finishes uses the estimate. `-A ...` and `-H 'User-Agent: ...'` in the command always win,
+  and `-A ''` / `-H 'User-Agent:'` still send no User-Agent. `Accept: */*` and everything else stay as curl sends them.
 
 ## What is supported
 
