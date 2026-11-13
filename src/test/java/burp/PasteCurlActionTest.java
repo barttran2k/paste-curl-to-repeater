@@ -419,4 +419,33 @@ class PasteCurlActionTest {
         action.run();
         assertEquals(1, sent.size(), errors.toString());
     }
+
+    @Test
+    void theSuppliedSettingsDecideTheDefaultUserAgentAndTheNoteGoesOnlyToTheLog() {
+        PasteCurlAction a = new PasteCurlAction(() -> "curl https://t.example/", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { infos.add(m); }
+            public void error(String t, String m) { errors.add(m); }
+            public void warning(String t, String m) { warnings.add(m); }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                return PasteCurlAction.FileChoice.CANCEL;
+            }
+        }, (r, t) -> sent.add(r), new PasteCurlAction.Log() {
+            public void output(String m) { logOut.add(m); }
+            public void error(Throwable t) { logErr.add(t); }
+        }, p -> new PasteCurlAction.FileInfo(p, p, "x"), () -> FileAccess.DENY,
+                () -> new burp.curl.CurlSettings("8.12.0-DEV", "version of the curl found at /usr/bin/curl"));
+        a.run();
+        assertEquals(1, sent.size());
+        assertTrue(raw(sent.get(0)).contains("User-Agent: curl/8.12.0-DEV\r\n"));
+        assertTrue(logOut.contains("NOTE: User-Agent curl/8.12.0-DEV: version of the curl found at /usr/bin/curl"), logOut.toString());
+        assertTrue(warnings.isEmpty() && errors.isEmpty() && infos.isEmpty());
+    }
+
+    @Test
+    void withoutASettingsSupplierTheOldBehaviourHolds() {
+        clipboard = "curl https://t.example/";
+        action.run();
+        assertTrue(raw(sent.get(0)).contains("User-Agent: curl/8.7.1\r\n"));
+        assertTrue(logOut.stream().noneMatch(l -> l.contains("User-Agent")), logOut.toString());
+    }
 }

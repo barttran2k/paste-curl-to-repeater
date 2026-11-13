@@ -3,6 +3,7 @@ package burp;
 import burp.curl.BuiltRequest;
 import burp.curl.Curl;
 import burp.curl.CurlParseException;
+import burp.curl.CurlSettings;
 import burp.curl.FileAccess;
 import burp.curl.ParsedCurl;
 import burp.curl.Warning;
@@ -112,6 +113,7 @@ public final class PasteCurlAction {
     private final Log log;
     private final FileProbe probe;
     private final Supplier<FileAccess> realFiles;
+    private final Supplier<CurlSettings> settings;
 
     /**
      * @param clipboard clipboard source
@@ -123,6 +125,22 @@ public final class PasteCurlAction {
      */
     public PasteCurlAction(ClipboardSource clipboard, Dialogs dialogs, RequestSink sink, Log log,
                            FileProbe probe, Supplier<FileAccess> realFiles) {
+        this(clipboard, dialogs, sink, log, probe, realFiles, () -> CurlSettings.DEFAULTS);
+    }
+
+    /**
+     * @param clipboard clipboard source
+     * @param dialogs dialogs
+     * @param sink request sink
+     * @param log log
+     * @param probe path inspector for the confirmation dialog
+     * @param realFiles factory of the FileAccess used after the user chose "Read files"
+     * @param settings supplies the build settings (default User-Agent version); called once per paste, must not
+     *                 block for long
+     */
+    public PasteCurlAction(ClipboardSource clipboard, Dialogs dialogs, RequestSink sink, Log log,
+                           FileProbe probe, Supplier<FileAccess> realFiles, Supplier<CurlSettings> settings) {
+        this.settings = settings;
         this.clipboard = clipboard;
         this.dialogs = dialogs;
         this.sink = sink;
@@ -191,7 +209,7 @@ public final class PasteCurlAction {
 
         List<BuiltRequest> requests;
         try {
-            requests = parsed.build(files);
+            requests = parsed.build(files, settings.get());
         } catch (CurlParseException e) {
             showParseError(e, text);
             return;

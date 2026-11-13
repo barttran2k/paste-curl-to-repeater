@@ -15,5 +15,15 @@ public interface ParsedCurl {
      * @return the finished requests
      * @throws CurlParseException if a request cannot be built
      */
-    List<BuiltRequest> build(FileAccess files) throws CurlParseException;
+    default List<BuiltRequest> build(FileAccess files) throws CurlParseException {
+        return build(files, CurlSettings.DEFAULTS);
+    }
+
+    /**
+     * @param files access to local files
+     * @param settings injected settings (the default User-Agent version)
+     * @return the finished requests
+     * @throws CurlParseException if a request cannot be built
+     */
+    List<BuiltRequest> build(FileAccess files, CurlSettings settings) throws CurlParseException;
 }

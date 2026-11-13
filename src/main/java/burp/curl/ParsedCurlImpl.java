@@ -63,9 +63,9 @@ final class ParsedCurlImpl implements ParsedCurl {
     }
 
     @Override
-    public List<BuiltRequest> build(FileAccess files) throws CurlParseException {
+    public List<BuiltRequest> build(FileAccess files, CurlSettings settings) throws CurlParseException {
         List<BuiltRequest> out = new ArrayList<>();
-        for (RequestDetails d : details(files)) {
+        for (RequestDetails d : details(files, settings)) {
             out.add(d.request());
         }
         return out;
@@ -73,8 +73,13 @@ final class ParsedCurlImpl implements ParsedCurl {
 
     /** Like {@link #build} but with the extra pieces the legacy facade needs. */
     List<RequestDetails> details(FileAccess files) throws CurlParseException {
+        return details(files, CurlSettings.DEFAULTS);
+    }
+
+    /** Like {@link #build} but with the extra pieces the legacy facade needs. */
+    List<RequestDetails> details(FileAccess files, CurlSettings settings) throws CurlParseException {
         try {
-            return detailsUnguarded(files);
+            return detailsUnguarded(files, settings);
         } catch (CurlParseException e) {
             throw e;
         } catch (RuntimeException | StackOverflowError e) {
@@ -84,10 +89,14 @@ final class ParsedCurlImpl implements ParsedCurl {
 
     /** {@link #details} without the safety net that turns unexpected runtime failures into parse exceptions. */
     List<RequestDetails> detailsUnguarded(FileAccess files) throws CurlParseException {
+        return detailsUnguarded(files, CurlSettings.DEFAULTS);
+    }
+
+    List<RequestDetails> detailsUnguarded(FileAccess files, CurlSettings settings) throws CurlParseException {
         // only the paths fileRefs() lists were shown to the user: nothing else is ever read
         FileAccess access = FileReads.guard(files == null ? FileAccess.DENY : files, new LinkedHashSet<>(fileRefs()));
         List<RequestDetails> result = new ArrayList<>();
-        CurlRequestBuilder builder = new CurlRequestBuilder(access);
+        CurlRequestBuilder builder = new CurlRequestBuilder(access, settings == null ? CurlSettings.DEFAULTS : settings);
         for (Run r : runs) {
             CurlCommandParser.Parsed p = CurlCommandParser.parse(r.args, r.command, access, false);
             for (Operation op : p.operations) {

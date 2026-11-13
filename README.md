@@ -20,9 +20,20 @@ A new Repeater tab opens with the request, sent to the host, port and scheme nam
   every path, the absolute path it resolves to and whether it exists. Nothing is read until you choose "Read files".
   "Use placeholders" puts `<<FILE: path>>` into the request instead. Relative paths are resolved against your home
   directory, because curl would use the shell's working directory and Burp does not know it. Files over 20 MB are refused.
+  If a path is a symbolic link (or lies in a linked directory), the dialog adds a "Symbolic link to:" line with the real
+  file; "Read files" reads exactly the real file that was shown and refuses a path whose target changed meanwhile.
 - If the request in Repeater may differ from what curl would send, a warning dialog says why. Less important notes go
   to the extension's Output tab. The pasted command itself is never written to the log.
-- A command that cannot be parsed shows the reason and, when known, the place in the text.
+- A command that cannot be parsed shows the reason and, when known, the line and column in the text and a masked excerpt
+  (only whitespace, quotes, backslashes, `$` and curl option names are shown; every other character is `·`), so that
+  tokens and passwords in the command never appear in the dialog.
+- Clipboard text over 10 MB (10 * 1024 * 1024 characters) is refused before parsing.
+- Without `-A` or a `User-Agent` header the request carries `User-Agent: curl/<version>`. The version is the one of the
+  curl installed on your machine: the extension runs `curl --version` once when it loads (fixed arguments, no shell,
+  3 seconds at most, in a background thread), looking for `curl` on the PATH and then in `/usr/bin`,
+  `/opt/homebrew/bin`, `/usr/local/bin` and `%SystemRoot%\System32`. If none is found or the output is not usable,
+  the built-in default `8.7.1` is used. A note in the Output tab says which value was used and why. A paste made
+  before the lookup has finished uses the built-in default.
 
 ## What is supported
 
