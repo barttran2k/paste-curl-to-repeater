@@ -29,8 +29,6 @@ public final class PasteCurlAction {
     public static final int MAX_LISTED_WARNINGS = 15;
     /** Largest clipboard text (in characters) that is parsed; anything bigger is refused before parsing. */
     public static final int MAX_CLIPBOARD_CHARS = 10 * 1024 * 1024;
-    /** Characters of pasted text shown on each side of a parse error position. */
-    static final int EXCERPT_RADIUS = 30;
 
     /** Title used by all dialogs. */
     public static final String TITLE = "Paste cURL";
@@ -256,22 +254,10 @@ public final class PasteCurlAction {
     private void showParseError(CurlParseException e, String text) {
         StringBuilder sb = new StringBuilder("Could not parse the cURL command:\n").append(e.getMessage());
         if (e.position() >= 0) {
-            sb.append("\n\nNear character ").append(e.position()).append(":\n").append(excerpt(text, e.position()));
+            sb.append("\n\nNear ").append(ParseErrorView.lineAndColumn(text, e.position()))
+                    .append(" (the text of the arguments is hidden):\n")
+                    .append(ParseErrorView.maskedExcerpt(text, e.position()));
         }
         dialogs.error(TITLE + " - cannot parse", sb.toString());
-    }
-
-    /**
-     * @param text pasted text
-     * @param position error offset
-     * @return a one-line excerpt around the position with a visible marker
-     */
-    static String excerpt(String text, int position) {
-        int pos = Math.max(0, Math.min(position, text.length()));
-        int from = Math.max(0, pos - EXCERPT_RADIUS);
-        int to = Math.min(text.length(), pos + EXCERPT_RADIUS);
-        String before = text.substring(from, pos).replaceAll("\\s", " ");
-        String after = text.substring(pos, to).replaceAll("\\s", " ");
-        return (from > 0 ? "..." : "") + before + " >>HERE<< " + after + (to < text.length() ? "..." : "");
     }
 }

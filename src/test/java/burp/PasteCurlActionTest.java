@@ -101,27 +101,16 @@ class PasteCurlActionTest {
     }
 
     @Test
-    void parseErrorWithPositionShowsExcerpt() {
+    void parseErrorWithPositionShowsLineColumnAndMaskedExcerpt() {
         clipboard = "curl 'https://example.com -H x";
         action.run();
         assertTrue(sent.isEmpty());
         assertEquals(1, errors.size());
         String m = errors.get(0);
         assertTrue(m.contains("Unterminated"), m);
-        assertTrue(m.contains("Near character 5"), m);
-        assertTrue(m.contains("curl  >>HERE<< 'https://example.com -H x"), m);
-    }
-
-    @Test
-    void excerptMarksPositionAndFlattensNewlines() {
-        String text = "a".repeat(50) + "\nBAD\n" + "b".repeat(50);
-        String ex = PasteCurlAction.excerpt(text, 51);
-        assertTrue(ex.startsWith("..."));
-        assertTrue(ex.endsWith("..."));
-        assertTrue(ex.contains(" >>HERE<< BAD"), ex);
-        assertFalse(ex.contains("\n"));
-        assertEquals("x >>HERE<< ", PasteCurlAction.excerpt("x", 99));
-        assertEquals(" >>HERE<< xy", PasteCurlAction.excerpt("xy", -5));
+        assertTrue(m.contains("Near line 1, column 6"), m);
+        assertTrue(m.contains("\u00b7\u00b7\u00b7\u00b7  >>HERE<< '\u00b7\u00b7\u00b7\u00b7\u00b7"), m);
+        assertFalse(m.contains("example"), m);
     }
 
     @Test
