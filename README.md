@@ -20,9 +20,23 @@ A new Repeater tab opens with the request, sent to the host, port and scheme nam
   every path, the absolute path it resolves to and whether it exists. Nothing is read until you choose "Read files".
   "Use placeholders" puts `<<FILE: path>>` into the request instead. Relative paths are resolved against your home
   directory, because curl would use the shell's working directory and Burp does not know it. Files over 20 MB are refused.
+  If a path is a symbolic link (or lies in a linked directory), the dialog adds a "Symbolic link to:" line with the real
+  file; "Read files" reads exactly the real file that was shown and refuses a path whose target changed meanwhile.
 - If the request in Repeater may differ from what curl would send, a warning dialog says why. Less important notes go
   to the extension's Output tab. The pasted command itself is never written to the log.
-- A command that cannot be parsed shows the reason and, when known, the place in the text.
+- A command that cannot be parsed shows the reason and, when known, the line and column in the text and a masked excerpt
+  (only whitespace, quotes, backslashes, `$` and curl option names are shown; every other character is `·`), so that
+  tokens and passwords in the command never appear in the dialog.
+- Clipboard text over 10 MB (10 * 1024 * 1024 characters) is refused before parsing.
+- A command without a User-Agent (no `-A`, no `User-Agent` header) gets a current desktop Chrome User-Agent for the
+  local operating system, in Chrome's reduced format (for example `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+  AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36`). This intentionally differs from what curl
+  would send (`curl/x.y.z`); a note in the Output tab says so and where the version came from. The Chrome major
+  version is read from the installed Chrome (macOS `Info.plist`, Windows version directory under Program Files or
+  LocalAppData; on Linux `google-chrome --version` or `chromium --version` is run once), otherwise it is estimated
+  from the date using Chrome's release schedule. This lookup runs once, in a background thread, when the extension
+  loads; a paste before it finishes uses the estimate. `-A ...` and `-H 'User-Agent: ...'` in the command always win,
+  and `-A ''` / `-H 'User-Agent:'` still send no User-Agent. `Accept: */*` and everything else stay as curl sends them.
 
 ## What is supported
 

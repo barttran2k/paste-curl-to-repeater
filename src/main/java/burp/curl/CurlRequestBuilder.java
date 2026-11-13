@@ -33,8 +33,15 @@ final class CurlRequestBuilder {
     /** the lossy warning for each skipped request; the caller attaches them to the requests that were built */
     final List<Warning> skippedWarnings = new ArrayList<>();
 
+    private final CurlSettings settings;
+
     CurlRequestBuilder(FileAccess files) {
+        this(files, CurlSettings.DEFAULTS);
+    }
+
+    CurlRequestBuilder(FileAccess files, CurlSettings settings) {
         this.files = files;
+        this.settings = settings;
     }
 
     /** What a request carries as its body, before the headers are written. */
@@ -531,7 +538,10 @@ final class CurlRequestBuilder {
         }
         if (!hasCustom(custom, "User-Agent")) {
             if (op.userAgent == null) {
-                sb.append("User-Agent: curl/8.7.1\r\n");
+                sb.append("User-Agent: ").append(settings.defaultUserAgent()).append("\r\n");
+                if (settings.note() != null) {
+                    w.add(Warning.note(settings.note()));
+                }
             } else if (!op.userAgent.isEmpty()) {
                 sb.append("User-Agent: ").append(op.userAgent).append("\r\n");
             }

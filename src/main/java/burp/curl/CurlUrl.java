@@ -358,41 +358,50 @@ public final class CurlUrl {
         return sb == null ? p : sb.toString();
     }
 
-    /** RFC 3986 section 5.2.4, applied to a path that starts with "/". */
+    /**
+     * RFC 3986 section 5.2.4, applied to a path that starts with "/". One pass over the input with an index and a
+     * single output buffer: linear in the length of the path.
+     */
     static String removeDotSegments(String in) {
-        StringBuilder out = new StringBuilder();
-        String input = in;
-        while (!input.isEmpty()) {
-            if (input.startsWith("../")) {
-                input = input.substring(3);
-            } else if (input.startsWith("./")) {
-                input = input.substring(2);
-            } else if (input.startsWith("/./")) {
-                input = input.substring(2);
-            } else if (input.equals("/.")) {
-                input = "/";
-            } else if (input.startsWith("/../")) {
-                input = input.substring(3);
+        int n = in.length();
+        StringBuilder out = new StringBuilder(n);
+        int i = 0;
+        while (i < n) {
+            if (in.startsWith("../", i)) {
+                i += 3;
+            } else if (in.startsWith("./", i)) {
+                i += 2;
+            } else if (in.startsWith("/./", i)) {
+                i += 2;
+            } else if (n - i == 2 && in.startsWith("/.", i)) {
+                out.append('/');
+                i = n;
+            } else if (in.startsWith("/../", i)) {
+                i += 3;
                 popSegment(out);
-            } else if (input.equals("/..")) {
-                input = "/";
+            } else if (n - i == 3 && in.startsWith("/..", i)) {
                 popSegment(out);
-            } else if (input.equals(".") || input.equals("..")) {
-                input = "";
+                out.append('/');
+                i = n;
+            } else if (n - i == 1 && in.charAt(i) == '.' || n - i == 2 && in.startsWith("..", i)) {
+                i = n;
             } else {
-                int next = input.indexOf('/', 1);
+                int next = in.indexOf('/', i + 1);
                 if (next < 0) {
-                    next = input.length();
+                    next = n;
                 }
-                out.append(input, 0, next);
-                input = input.substring(next);
+                out.append(in, i, next);
+                i = next;
             }
         }
         return out.toString();
     }
 
     private static void popSegment(StringBuilder out) {
-        int slash = out.lastIndexOf("/");
+        int slash = out.length() - 1;
+        while (slash >= 0 && out.charAt(slash) != '/') {
+            slash--;
+        }
         out.setLength(Math.max(slash, 0));
     }
 

@@ -101,27 +101,16 @@ class PasteCurlActionTest {
     }
 
     @Test
-    void parseErrorWithPositionShowsExcerpt() {
+    void parseErrorWithPositionShowsLineColumnAndMaskedExcerpt() {
         clipboard = "curl 'https://example.com -H x";
         action.run();
         assertTrue(sent.isEmpty());
         assertEquals(1, errors.size());
         String m = errors.get(0);
         assertTrue(m.contains("Unterminated"), m);
-        assertTrue(m.contains("Near character 5"), m);
-        assertTrue(m.contains("curl  >>HERE<< 'https://example.com -H x"), m);
-    }
-
-    @Test
-    void excerptMarksPositionAndFlattensNewlines() {
-        String text = "a".repeat(50) + "\nBAD\n" + "b".repeat(50);
-        String ex = PasteCurlAction.excerpt(text, 51);
-        assertTrue(ex.startsWith("..."));
-        assertTrue(ex.endsWith("..."));
-        assertTrue(ex.contains(" >>HERE<< BAD"), ex);
-        assertFalse(ex.contains("\n"));
-        assertEquals("x >>HERE<< ", PasteCurlAction.excerpt("x", 99));
-        assertEquals(" >>HERE<< xy", PasteCurlAction.excerpt("xy", -5));
+        assertTrue(m.contains("Near line 1, column 6"), m);
+        assertTrue(m.contains("\u00b7\u00b7\u00b7\u00b7  >>HERE<< '\u00b7\u00b7\u00b7\u00b7\u00b7"), m);
+        assertFalse(m.contains("example"), m);
     }
 
     @Test
@@ -334,5 +323,134 @@ class PasteCurlActionTest {
         }, probe, () -> FileAccess.DENY);
         a.run();
         assertEquals(List.of("/probe-home"), homes);
+    }
+
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path tmpHome;
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path tmpOther;
+
+    @Test
+    void symlinkedFileIsShownWithItsRealTargetAndThatIsWhatIsSent() throws Exception {
+        java.nio.file.Path secret = tmpOther.resolve("id_rsa");
+        java.nio.file.Files.writeString(secret, "PRIVATE-KEY");
+        try {
+            java.nio.file.Files.createSymbolicLink(tmpHome.resolve("body.json"), secret);
+        } catch (UnsupportedOperationException | IOException e) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "no symlinks: " + e);
+        }
+        LocalFiles lf = new LocalFiles(tmpHome);
+        List<String> dialogText = new ArrayList<>();
+        List<BuiltRequest> out = new ArrayList<>();
+        PasteCurlAction a = new PasteCurlAction(() -> "curl --data-binary @~/body.json https://t.example/", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { }
+            public void error(String t, String m) { }
+            public void warning(String t, String m) { }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                dialogText.add(SwingDialogs.fileConfirmationText(f, home));
+                return PasteCurlAction.FileChoice.READ_FILES;
+            }
+        }, (r, t) -> out.add(r), new PasteCurlAction.Log() {
+            public void output(String m) { }
+            public void error(Throwable t) { }
+        }, lf, () -> lf);
+        a.run();
+        assertEquals(1, dialogText.size());
+        assertTrue(dialogText.get(0).contains("Symbolic link to: " + secret.toRealPath()), dialogText.get(0));
+        assertEquals(1, out.size());
+        assertTrue(raw(out.get(0)).endsWith("PRIVATE-KEY"));
+    }
+
+    @Test
+    void aSwapBetweenTheDialogAndTheReadGivesAPlaceholderAndAWarning() throws Exception {
+        java.nio.file.Path safe = tmpOther.resolve("safe.json");
+        java.nio.file.Files.writeString(safe, "SAFE");
+        java.nio.file.Path secret = tmpOther.resolve("id_rsa");
+        java.nio.file.Files.writeString(secret, "PRIVATE-KEY");
+        java.nio.file.Path l = tmpHome.resolve("body.json");
+        try {
+            java.nio.file.Files.createSymbolicLink(l, safe);
+        } catch (UnsupportedOperationException | IOException e) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "no symlinks: " + e);
+        }
+        LocalFiles lf = new LocalFiles(tmpHome);
+        List<BuiltRequest> out = new ArrayList<>();
+        List<String> warn = new ArrayList<>();
+        PasteCurlAction a = new PasteCurlAction(() -> "curl --data-binary @~/body.json https://t.example/", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { }
+            public void error(String t, String m) { }
+            public void warning(String t, String m) { warn.add(m); }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                try {
+                    java.nio.file.Files.delete(l);
+                    java.nio.file.Files.createSymbolicLink(l, secret);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                return PasteCurlAction.FileChoice.READ_FILES;
+            }
+        }, (r, t) -> out.add(r), new PasteCurlAction.Log() {
+            public void output(String m) { }
+            public void error(Throwable t) { }
+        }, lf, () -> lf);
+        a.run();
+        assertEquals(1, out.size());
+        assertFalse(raw(out.get(0)).contains("PRIVATE-KEY"));
+        assertTrue(raw(out.get(0)).contains("<<FILE: ~/body.json>>"), raw(out.get(0)));
+        assertEquals(1, warn.size());
+    }
+
+    @Test
+    void clipboardTextOverTheLimitIsRefusedBeforeParsing() {
+        assertEquals(10 * 1024 * 1024, PasteCurlAction.MAX_CLIPBOARD_CHARS);
+        clipboard = "curl https://example.com/ -d '" + "x".repeat(PasteCurlAction.MAX_CLIPBOARD_CHARS) + "'";
+        action.run();
+        assertTrue(sent.isEmpty());
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).contains("too large"), errors.get(0));
+        assertFalse(errors.get(0).contains("xxxxxxxx"));
+    }
+
+    @Test
+    void clipboardTextAtTheLimitIsStillParsed() {
+        String head = "curl https://example.com/ -d '";
+        clipboard = head + "x".repeat(PasteCurlAction.MAX_CLIPBOARD_CHARS - head.length() - 1) + "'";
+        assertEquals(PasteCurlAction.MAX_CLIPBOARD_CHARS, clipboard.length());
+        action.run();
+        assertEquals(1, sent.size(), errors.toString());
+    }
+
+    @Test
+    void theSuppliedBrowserUserAgentIsSentAndTheNoteGoesOnlyToTheLog() {
+        PasteCurlAction a = new PasteCurlAction(() -> "curl https://t.example/", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { infos.add(m); }
+            public void error(String t, String m) { errors.add(m); }
+            public void warning(String t, String m) { warnings.add(m); }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                return PasteCurlAction.FileChoice.CANCEL;
+            }
+        }, (r, t) -> sent.add(r), new PasteCurlAction.Log() {
+            public void output(String m) { logOut.add(m); }
+            public void error(Throwable t) { logErr.add(t); }
+        }, p -> new PasteCurlAction.FileInfo(p, p, "x"), () -> FileAccess.DENY,
+                () -> new burp.curl.CurlSettings(BrowserUserAgent.userAgent(BrowserUserAgent.Os.LINUX, 142),
+                        "User-Agent set to a browser value (Chrome 142, version of the installed Chrome); curl itself would send its own curl/x.y.z"));
+        a.run();
+        assertEquals(1, sent.size());
+        assertTrue(raw(sent.get(0)).contains("User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\r\nAccept: */*\r\n"), raw(sent.get(0)));
+        assertTrue(logOut.contains("NOTE: User-Agent set to a browser value (Chrome 142, version of the installed "
+                + "Chrome); curl itself would send its own curl/x.y.z"), logOut.toString());
+        // the core default is untouched
+        assertEquals("curl/8.7.1", burp.curl.CurlSettings.DEFAULT_USER_AGENT);
+        assertTrue(warnings.isEmpty() && errors.isEmpty() && infos.isEmpty());
+    }
+
+    @Test
+    void withoutASettingsSupplierTheOldBehaviourHolds() {
+        clipboard = "curl https://t.example/";
+        action.run();
+        assertTrue(raw(sent.get(0)).contains("User-Agent: curl/8.7.1\r\n"));
+        assertTrue(logOut.stream().noneMatch(l -> l.contains("User-Agent")), logOut.toString());
     }
 }

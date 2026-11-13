@@ -3,6 +3,7 @@ package burp;
 import burp.curl.BuiltRequest;
 import burp.curl.Curl;
 import burp.curl.CurlParseException;
+import burp.curl.CurlSettings;
 import burp.curl.FileAccess;
 import burp.curl.ParsedCurl;
 import burp.curl.Warning;
@@ -27,8 +28,8 @@ public final class PasteCurlAction {
     public static final int MAX_TABS = 20;
     /** Maximum number of LOSSY warnings listed in the dialog. */
     public static final int MAX_LISTED_WARNINGS = 15;
-    /** Characters of pasted text shown on each side of a parse error position. */
-    static final int EXCERPT_RADIUS = 30;
+    /** Largest clipboard text (in characters) that is parsed; anything bigger is refused before parsing. */
+    public static final int MAX_CLIPBOARD_CHARS = 10 * 1024 * 1024;
 
     /** Title used by all dialogs. */
     public static final String TITLE = "Paste cURL";
@@ -47,8 +48,15 @@ public final class PasteCurlAction {
      * @param written the path as written in the command
      * @param resolved the absolute path it resolves to, or a short reason when it cannot be resolved
      * @param status "found, N bytes", "not found", "too large (N bytes)", ...
+     * @param symlinkTarget the real file behind {@code resolved} when a symbolic link (in the file or in a parent
+     *                      directory) leads somewhere else; null when the path is its own real path
      */
-    public record FileInfo(String written, String resolved, String status) { }
+    public record FileInfo(String written, String resolved, String status, String symlinkTarget) {
+        /** A path without a symbolic link. */
+        public FileInfo(String written, String resolved, String status) {
+            this(written, resolved, status, null);
+        }
+    }
 
     /** Inspects paths without reading their content. */
     public interface FileProbe {
@@ -105,6 +113,7 @@ public final class PasteCurlAction {
     private final Log log;
     private final FileProbe probe;
     private final Supplier<FileAccess> realFiles;
+    private final Supplier<CurlSettings> settings;
 
     /**
      * @param clipboard clipboard source
@@ -116,6 +125,22 @@ public final class PasteCurlAction {
      */
     public PasteCurlAction(ClipboardSource clipboard, Dialogs dialogs, RequestSink sink, Log log,
                            FileProbe probe, Supplier<FileAccess> realFiles) {
+        this(clipboard, dialogs, sink, log, probe, realFiles, () -> CurlSettings.DEFAULTS);
+    }
+
+    /**
+     * @param clipboard clipboard source
+     * @param dialogs dialogs
+     * @param sink request sink
+     * @param log log
+     * @param probe path inspector for the confirmation dialog
+     * @param realFiles factory of the FileAccess used after the user chose "Read files"
+     * @param settings supplies the build settings (default User-Agent); called once per paste, must not
+     *                 block for long
+     */
+    public PasteCurlAction(ClipboardSource clipboard, Dialogs dialogs, RequestSink sink, Log log,
+                           FileProbe probe, Supplier<FileAccess> realFiles, Supplier<CurlSettings> settings) {
+        this.settings = settings;
         this.clipboard = clipboard;
         this.dialogs = dialogs;
         this.sink = sink;
@@ -150,6 +175,14 @@ public final class PasteCurlAction {
             return;
         }
 
+        if (text.length() > MAX_CLIPBOARD_CHARS) {
+            dialogs.error(TITLE + " - text too large",
+                    "The clipboard text is too large (" + text.length() + " characters; the limit is "
+                            + MAX_CLIPBOARD_CHARS + ", about 10 MB). Nothing was parsed and no request was sent.\n"
+                            + "Copy only the curl command, and put a large body in a file (-d @file).");
+            return;
+        }
+
         ParsedCurl parsed;
         try {
             parsed = Curl.parse(text);
@@ -176,7 +209,7 @@ public final class PasteCurlAction {
 
         List<BuiltRequest> requests;
         try {
-            requests = parsed.build(files);
+            requests = parsed.build(files, settings.get());
         } catch (CurlParseException e) {
             showParseError(e, text);
             return;
@@ -239,22 +272,10 @@ public final class PasteCurlAction {
     private void showParseError(CurlParseException e, String text) {
         StringBuilder sb = new StringBuilder("Could not parse the cURL command:\n").append(e.getMessage());
         if (e.position() >= 0) {
-            sb.append("\n\nNear character ").append(e.position()).append(":\n").append(excerpt(text, e.position()));
+            sb.append("\n\nNear ").append(ParseErrorView.lineAndColumn(text, e.position()))
+                    .append(" (the text of the arguments is hidden):\n")
+                    .append(ParseErrorView.maskedExcerpt(text, e.position()));
         }
         dialogs.error(TITLE + " - cannot parse", sb.toString());
-    }
-
-    /**
-     * @param text pasted text
-     * @param position error offset
-     * @return a one-line excerpt around the position with a visible marker
-     */
-    static String excerpt(String text, int position) {
-        int pos = Math.max(0, Math.min(position, text.length()));
-        int from = Math.max(0, pos - EXCERPT_RADIUS);
-        int to = Math.min(text.length(), pos + EXCERPT_RADIUS);
-        String before = text.substring(from, pos).replaceAll("\\s", " ");
-        String after = text.substring(pos, to).replaceAll("\\s", " ");
-        return (from > 0 ? "..." : "") + before + " >>HERE<< " + after + (to < text.length() ? "..." : "");
     }
 }
