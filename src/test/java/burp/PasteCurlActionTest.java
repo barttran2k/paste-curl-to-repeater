@@ -335,4 +335,79 @@ class PasteCurlActionTest {
         a.run();
         assertEquals(List.of("/probe-home"), homes);
     }
+
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path tmpHome;
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path tmpOther;
+
+    @Test
+    void symlinkedFileIsShownWithItsRealTargetAndThatIsWhatIsSent() throws Exception {
+        java.nio.file.Path secret = tmpOther.resolve("id_rsa");
+        java.nio.file.Files.writeString(secret, "PRIVATE-KEY");
+        try {
+            java.nio.file.Files.createSymbolicLink(tmpHome.resolve("body.json"), secret);
+        } catch (UnsupportedOperationException | IOException e) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "no symlinks: " + e);
+        }
+        LocalFiles lf = new LocalFiles(tmpHome);
+        List<String> dialogText = new ArrayList<>();
+        List<BuiltRequest> out = new ArrayList<>();
+        PasteCurlAction a = new PasteCurlAction(() -> "curl --data-binary @~/body.json https://t.example/", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { }
+            public void error(String t, String m) { }
+            public void warning(String t, String m) { }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                dialogText.add(SwingDialogs.fileConfirmationText(f, home));
+                return PasteCurlAction.FileChoice.READ_FILES;
+            }
+        }, (r, t) -> out.add(r), new PasteCurlAction.Log() {
+            public void output(String m) { }
+            public void error(Throwable t) { }
+        }, lf, () -> lf);
+        a.run();
+        assertEquals(1, dialogText.size());
+        assertTrue(dialogText.get(0).contains("Symbolic link to: " + secret.toRealPath()), dialogText.get(0));
+        assertEquals(1, out.size());
+        assertTrue(raw(out.get(0)).endsWith("PRIVATE-KEY"));
+    }
+
+    @Test
+    void aSwapBetweenTheDialogAndTheReadGivesAPlaceholderAndAWarning() throws Exception {
+        java.nio.file.Path safe = tmpOther.resolve("safe.json");
+        java.nio.file.Files.writeString(safe, "SAFE");
+        java.nio.file.Path secret = tmpOther.resolve("id_rsa");
+        java.nio.file.Files.writeString(secret, "PRIVATE-KEY");
+        java.nio.file.Path l = tmpHome.resolve("body.json");
+        try {
+            java.nio.file.Files.createSymbolicLink(l, safe);
+        } catch (UnsupportedOperationException | IOException e) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "no symlinks: " + e);
+        }
+        LocalFiles lf = new LocalFiles(tmpHome);
+        List<BuiltRequest> out = new ArrayList<>();
+        List<String> warn = new ArrayList<>();
+        PasteCurlAction a = new PasteCurlAction(() -> "curl --data-binary @~/body.json https://t.example/", new PasteCurlAction.Dialogs() {
+            public void info(String t, String m) { }
+            public void error(String t, String m) { }
+            public void warning(String t, String m) { warn.add(m); }
+            public PasteCurlAction.FileChoice confirmFiles(List<PasteCurlAction.FileInfo> f, String home) {
+                try {
+                    java.nio.file.Files.delete(l);
+                    java.nio.file.Files.createSymbolicLink(l, secret);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                return PasteCurlAction.FileChoice.READ_FILES;
+            }
+        }, (r, t) -> out.add(r), new PasteCurlAction.Log() {
+            public void output(String m) { }
+            public void error(Throwable t) { }
+        }, lf, () -> lf);
+        a.run();
+        assertEquals(1, out.size());
+        assertFalse(raw(out.get(0)).contains("PRIVATE-KEY"));
+        assertTrue(raw(out.get(0)).contains("<<FILE: ~/body.json>>"), raw(out.get(0)));
+        assertEquals(1, warn.size());
+    }
 }

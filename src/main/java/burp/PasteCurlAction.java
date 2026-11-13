@@ -47,8 +47,15 @@ public final class PasteCurlAction {
      * @param written the path as written in the command
      * @param resolved the absolute path it resolves to, or a short reason when it cannot be resolved
      * @param status "found, N bytes", "not found", "too large (N bytes)", ...
+     * @param symlinkTarget the real file behind {@code resolved} when a symbolic link (in the file or in a parent
+     *                      directory) leads somewhere else; null when the path is its own real path
      */
-    public record FileInfo(String written, String resolved, String status) { }
+    public record FileInfo(String written, String resolved, String status, String symlinkTarget) {
+        /** A path without a symbolic link. */
+        public FileInfo(String written, String resolved, String status) {
+            this(written, resolved, status, null);
+        }
+    }
 
     /** Inspects paths without reading their content. */
     public interface FileProbe {

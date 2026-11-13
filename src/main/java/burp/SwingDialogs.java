@@ -62,6 +62,10 @@ public final class SwingDialogs implements PasteCurlAction.Dialogs {
         for (PasteCurlAction.FileInfo f : files) {
             sb.append("\nAs written: ").append(f.written());
             sb.append("\nResolves to: ").append(f.resolved());
+            if (f.symlinkTarget() != null) {
+                sb.append("\nSymbolic link to: ").append(f.symlinkTarget());
+                sb.append("\n  (the file that is really read is the target, not the path above)");
+            }
             sb.append("\nStatus: ").append(f.status()).append('\n');
         }
         return sb.toString();
